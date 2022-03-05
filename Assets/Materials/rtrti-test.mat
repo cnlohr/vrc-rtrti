@@ -39,6 +39,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _EmissionTex:
+        m_Texture: {fileID: 2800000, guid: a337b85d7d3b8f0408576d7f08bf609f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _GeoTex:
         m_Texture: {fileID: 2800000, guid: 960f7d870863e444c9115a28efefd301, type: 2}
         m_Scale: {x: 1, y: 1}

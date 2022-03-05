@@ -36,7 +36,7 @@ float4 CoreTrace( float3 eye, float3 dir )
 		{
 			// Intersection
 			
-			col += .001;
+			//col += .001;
 			
 			if( truefalse.x < 0 )
 			{
