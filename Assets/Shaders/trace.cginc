@@ -4,6 +4,7 @@ sampler2D _EmissionTex;
 
 float4 CoreTrace( float3 eye, float3 dir )
 {
+	dir = normalize( dir );
 	float4 col = 0.;
 	float2 ptr = float2( 0, 0 );
 	float4 value;
@@ -20,9 +21,16 @@ float4 CoreTrace( float3 eye, float3 dir )
 		value.xyz = value.xyz - eye;
 		float b = dot( dir, value.xyz ); // Actually would be *2, but we can algebra that out.
 		float c = dot( value.xyz, value.xyz ) - value.w;
-		float det = b * b - c;
+		float det = b * b - c; // a = 1; b is 1/2 "b"
 		
-		//XXX TODO: Catch if ball is behind us.
+		float radical = sqrt( det ); //Actually 1/2 radical
+		float2 ts = .5*b + float2(radical,-radical);
+		// T is the computed distance to sphere surface.
+		
+		//XXX TODO: Catch if ball is behind us. 
+		// XXX TODO Check math (maybe it's right? maybe I algebrad wrong.
+		det = all( ts < 0 )?-1:det;
+		det = all( ts > minz)?-1:det;
 
 		if( det > 0 )
 		{
@@ -38,12 +46,8 @@ float4 CoreTrace( float3 eye, float3 dir )
 				float4 v1 = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 5, 0.0 ) );
 				float4 v2 = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 7, 0.0 ) );
 				
-				// https://tr.inf.unibe.ch/pdf/iam-04-004.pdf
-				//float d = -dot( N, v0 ); 
-				//float t = -( dot( N, eye ) + d) / dot( dir.xyz, N.xyz );
-				//float3 P = eye + t * dir; 
-
 				// Compute t and barycentric coordinates using Moller-Trumbore
+				// https://tr.inf.unibe.ch/pdf/iam-04-004.pdf
 				float3 E1 = v1 - v0;
 				float3 E2 = v2 - v0;
 				float3 T = eye - v0;
