@@ -2,8 +2,9 @@
 {
 	Properties
 	{
-		_MainTex ("Texture", 2D) = "white" {}
+		_EmissionTex ("Emission Texture", 2D) = "white" {}
 		_BumpMap("Normal Map", 2D) = "bump" {}
+		_GeoTex ("Geometry", 2D) = "black" {}
 	}
 	SubShader
 	{
@@ -20,6 +21,8 @@
 
 			#include "UnityCG.cginc"
 
+			#include "trace.cginc"
+			
 			struct appdata
 			{
 				float4 vertex : POSITION;
@@ -41,7 +44,6 @@
 				float3 tspace2 : TEXCOORD5; // tangent.z, bitangent.z, normal.z
 			};
 
-			sampler2D _MainTex;
 			sampler2D _BumpMap;
 
 			v2f vert (appdata v)
@@ -77,9 +79,10 @@
 				float3 worldViewDir = normalize(UnityWorldSpaceViewDir(i.worldPos));
 				float3 worldRefl = reflect(-worldViewDir, worldNormal);
 				
-				fixed4 col = tex2D(_MainTex, i.uv);
+				//fixed4 col = tex2D(_EmissionTex, i.uv);
 				
-				col.rgb = worldRefl;
+				float4 col = CoreTrace( i.worldPos, worldRefl );
+				
 				UNITY_APPLY_FOG(i.fogCoord, col);
 				return col;
 			}
