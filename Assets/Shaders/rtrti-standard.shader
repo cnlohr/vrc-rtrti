@@ -15,6 +15,8 @@
 		_RoughnessShift( "Roughness Shift", float ) = 0.0
 		_NormalizeValue("Normalize Value", float) = 0.0
 		_RoughAdj("Roughness Adjust", float) = 0.3
+		_Flip("Flip Mirror Enable", float ) =0.0
+		[HDR] _Ambient("Ambient Color", Color) = (0.1,0.1,0.1,1.0)
     }
     SubShader
     {
@@ -35,6 +37,8 @@
 		float _RoughnessIntensity, _RoughnessShift;
 		float _NormalizeValue;
 		float _RoughAdj;
+		float _Flip;
+		float4 _Ambient;
 
 		#include "trace.cginc"
 
@@ -64,19 +68,49 @@
 			float2 uvo;
 			float4 col = CoreTrace( IN.worldPos, worldRefl, z, uvo ) * _MediaBrightness;
 			if( uvo.x > 1.0 ) col = 0.0;
-			
-//			if( z > 1e10 )
-//				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal )*.5;
+
+				
+			// Test if we need to reverse-cast through a mirror.
+			if( _Flip > 0.5 )
+			{
+				float3 mirror_pos = float3( -12, 1.5, 0 );
+				float3 mirror_size = float3( 0, 3, 9 );
+				float3 mirror_n = float3( 1, 0, 0 );
+
+				float3 revray = float3( -worldRefl.x, worldRefl.yz );
+				float3 revpos = IN.worldPos;
+				
+				// Make sure this ray intersects the mirror.
+				float mirrort = dot( mirror_pos - IN.worldPos, mirror_n ) / dot( worldRefl, mirror_n );
+				float3 mirrorp = IN.worldPos + worldRefl * mirrort;
+				if( all( abs( mirrorp.yz - mirror_pos.yz ) - mirror_size.yz/2 < 0 ) )
+				{
+				
+					revpos.x = -(revpos.x - mirror_pos) + mirror_pos;
+
+					float z2;
+					float4 c2 = CoreTrace( revpos, revray, z2, uvo ) * _MediaBrightness;
+					if( z2 < z )
+					{
+						col = c2;
+						z = z2;
+					}
+				}
+			}
+				
+			if( z > 1e10 )
+				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal )*.5;
 			
 			float rough = 1.0-tex2D(_Roughness, IN.uv_MainTex)*_RoughnessIntensity + _RoughnessShift;
 			rough *= _RoughAdj;
+			rough = saturate( rough );
 			col = (1.-rough)*col;
 
 			//c = 1.0;
-            o.Albedo = c.rgb*_DiffuseUse;
+            o.Albedo = c.rgb*(_DiffuseUse);
             o.Metallic = tex2D (_Metallicity, IN.uv_MainTex);
             o.Smoothness = tex2D (_Roughness, IN.uv_MainTex);
-			o.Emission = col;
+			o.Emission = max(col,0) + c.rgb * _Ambient;
             o.Alpha = c.a;
         }
         ENDCG

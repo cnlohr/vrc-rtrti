@@ -18,7 +18,7 @@
     SubShader
     {
 
-		Tags { "RenderType"="Opaque" "PerformanceChecks"="False"}
+		Tags { "RenderType"="Opaque" "PerformanceChecks"="False"  "LightMode"="ForwardBase"}
 
         Pass
         {

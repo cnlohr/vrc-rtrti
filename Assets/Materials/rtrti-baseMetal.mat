@@ -87,14 +87,15 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _RoughAdj: 1
-    - _RoughnessIntensity: 2.08
-    - _RoughnessShift: 0.1
+    - _RoughnessIntensity: 2
+    - _RoughnessShift: 0.12
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
+    - _Ambient: {r: 0.06, g: 0.06, b: 0.06, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _UVScale: {r: 2, g: 2, b: 0, a: 0}

@@ -13,6 +13,7 @@
 		_UVScale(  "UV Scale", Vector ) = ( 2, 2, 0, 0 )
 		_RoughnessIntensity( "Roughness Intensity", float ) = 3.0
 		_NormalizeValue("Normalize Value", float) = 0.0
+		_Flip ( "Flip Mirror Enable", float ) = 0.5
 		_RoughAdj("Roughness Adjust", float) = 0.3
 	}
 	SubShader
@@ -62,6 +63,7 @@
 			float _RoughnessIntensity;
 			float _NormalizeValue;
 			float _RoughAdj;
+			float _Flip;
 
 			v2f vert (appdata v)
 			{
@@ -103,6 +105,35 @@
 				float2 uvo;
 				float4 col = CoreTrace( i.worldPos, worldRefl, z, uvo ) * _MediaBrightness;
 				if( uvo.x > 1.0 ) col = 0.0;
+				
+				// Test if we need to reverse-cast through a mirror.
+				if( _Flip > 0.5 )
+				{
+					float3 mirror_pos = float3( -12, 1.5, 0 );
+					float3 mirror_size = float3( 0, 3, 9 );
+					float3 mirror_n = float3( 1, 0, 0 );
+
+					float3 revray = float3( -worldRefl.x, worldRefl.yz );
+					float3 revpos = i.worldPos;
+					
+					// Make sure this ray intersects the mirror.
+					float mirrort = dot( mirror_pos - i.worldPos, mirror_n ) / dot( worldRefl, mirror_n );
+					float3 mirrorp = i.worldPos + worldRefl * mirrort;
+					if( all( abs( mirrorp.yz - mirror_pos.yz ) - mirror_size.yz/2 < 0 ) )
+					{
+					
+						revpos.x = -(revpos.x - mirror_pos) + mirror_pos;
+
+						float z2;
+						float4 c2 = CoreTrace( revpos, revray, z2, uvo ) * _MediaBrightness;
+						if( z2 < z )
+						{
+							col = c2;
+							z = z2;
+						}
+					}
+				}
+				
 				//col.rgb = float3( uvo.xy, 0.0 );
 
 				if( z > 1e10 )
