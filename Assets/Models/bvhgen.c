@@ -278,7 +278,7 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 			xyzr[1] = c1[1] + ( c2[1] - c1[1] ) * (R - r1) / clen;
 			xyzr[2] = c1[2] + ( c2[2] - c1[2] ) * (R - r1) / clen;
 			xyzr[3] = R;
-			
+			printf( "Join %d\n", nrpairs );
 #if 0
 			float edgesize = (edgej + lenji + edgei)/2;
 			float center = edgesize - edgei;
@@ -305,8 +305,8 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 	return pairs + nrpairs - 1;
 }
 
-#define TEXW 128
-#define TEXH 128
+#define TEXW 256
+#define TEXH 256
 float asset2d[TEXH][TEXW][4];
 int lineallocations[TEXH];
 int totalallocations;

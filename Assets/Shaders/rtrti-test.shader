@@ -52,7 +52,9 @@
 				float3 dir = normalize( inval.worldView );
 				float3 eye = _WorldSpaceCameraPos.xyz;
 				
-				float4 col = CoreTrace( eye, dir );
+				float z;
+				float2 uvo;
+				float4 col = CoreTrace( eye, dir, z, uvo );
 				
 				UNITY_APPLY_FOG(i.fogCoord, col);
 				return float4( col.xyz, 1.0 );

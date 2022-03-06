@@ -3,11 +3,23 @@
 	Properties
 	{
 		_EmissionTex ("Emission Texture", 2D) = "white" {}
+		_MainTex("Main Texture", 2D) = "white" {}
+		_Roughness("Roughness", 2D) = "white" {}
+		_Metallicity("Metallicity", 2D) = "white" {}
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_GeoTex ("Geometry", 2D) = "black" {}
+		_DiffuseUse( "Diffuse Use", float ) = .1
+		_MediaBrightness( "Media Brightness", float ) = 1.2
+		_UVScale(  "UV Scale", Vector ) = ( 2, 2, 0, 0 )
+		_RoughnessIntensity( "Roughness Intensity", float ) = 3.0
+		_NormalizeValue("Normalize Value", float) = 0.0
+		_RoughAdj("Roughness Adjust", float) = 0.3
 	}
 	SubShader
 	{
+	
+	
+	
 		Tags { "RenderType"="Opaque" }
 		LOD 100
 
@@ -44,13 +56,18 @@
 				float3 tspace2 : TEXCOORD5; // tangent.z, bitangent.z, normal.z
 			};
 
-			sampler2D _BumpMap;
+			sampler2D _BumpMap, _MainTex, _Roughness, _Metallicity;
+			float _DiffuseUse, _MediaBrightness;
+			float4 _UVScale;
+			float _RoughnessIntensity;
+			float _NormalizeValue;
+			float _RoughAdj;
 
 			v2f vert (appdata v)
 			{
 				v2f o;
 				o.vertex = UnityObjectToClipPos(v.vertex);
-				o.uv = v.uv;
+				o.uv = v.uv * _UVScale;
 				o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
 
                 half3 wNormal = UnityObjectToWorldNormal(v.normal);
@@ -71,6 +88,8 @@
 			fixed4 frag (v2f i) : SV_Target
 			{
 				float3 tnormal = UnpackNormal(tex2D(_BumpMap, i.uv));
+				tnormal.z+=_NormalizeValue;
+				tnormal = normalize(tnormal);
 	            half3 worldNormal;
                 worldNormal.x = dot(i.tspace0, tnormal);
                 worldNormal.y = dot(i.tspace1, tnormal);
@@ -79,9 +98,19 @@
 				float3 worldViewDir = normalize(UnityWorldSpaceViewDir(i.worldPos));
 				float3 worldRefl = reflect(-worldViewDir, worldNormal);
 				
-				//fixed4 col = tex2D(_EmissionTex, i.uv);
+
+				float z;
+				float2 uvo;
+				float4 col = CoreTrace( i.worldPos, worldRefl, z, uvo ) * _MediaBrightness;
+				if( uvo.x > 1.0 ) col = 0.0;
+				//col.rgb = float3( uvo.xy, 0.0 );
+
+				if( z > 1e10 )
+					col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal )*.5;
 				
-				float4 col = CoreTrace( i.worldPos, worldRefl );
+				float rough = 1.0-tex2D(_Roughness, i.uv)*_RoughnessIntensity;
+				rough *= _RoughAdj;
+				col = (1.-rough)*col + tex2D(_MainTex, i.uv)*_DiffuseUse*rough;
 				
 				UNITY_APPLY_FOG(i.fogCoord, col);
 				return col;

@@ -2,7 +2,7 @@ sampler2D _GeoTex;
 float4 _GeoTex_TexelSize;
 sampler2D _EmissionTex;
 
-float4 CoreTrace( float3 eye, float3 dir )
+float4 CoreTrace( float3 eye, float3 dir, out float z, out float2 uvo )
 {
 	dir = normalize( dir );
 	float4 col = 0.;
@@ -11,8 +11,9 @@ float4 CoreTrace( float3 eye, float3 dir )
 	float4 truefalse;
 	int i = 0;
 	float minz = 1e20;
+	
 	[loop]
-	do
+	while( i++ < 4096 && ptr.x >= 0 )
 	{
 		value = tex2D( _GeoTex, ptr );
 		truefalse = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x, 0 ) );
@@ -41,10 +42,10 @@ float4 CoreTrace( float3 eye, float3 dir )
 			if( truefalse.x < 0 )
 			{
 				// Do triangle intersection. If not, set to no intersection.
-				float3 N =  tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 2, 0.0 ) );
-				float4 v0 = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 3, 0.0 ) );
-				float4 v1 = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 5, 0.0 ) );
-				float4 v2 = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 7, 0.0 ) );
+				float3 N =  tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, 0.0 ), 0.0, 0.0 ) );
+				float4 v0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 3, 0.0 ), 0.0, 0.0 ) );
+				float4 v1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 5, 0.0 ), 0.0, 0.0 ) );
+				float4 v2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 7, 0.0 ), 0.0, 0.0 ) );
 				
 				// Compute t and barycentric coordinates using Moller-Trumbore
 				// https://tr.inf.unibe.ch/pdf/iam-04-004.pdf
@@ -63,9 +64,9 @@ float4 CoreTrace( float3 eye, float3 dir )
 
 				if( all( tbary.xyzw >= 0 ) && tbary.x < minz )
 				{
-					float4 n0 = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 4, 0.0 ) );
-					float4 n1 = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 6, 0.0 ) );
-					float4 n2 = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x * 8, 0.0 ) );
+					float4 n0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 4, 0.0 ), 0.0, 0.0 ) );
+					float4 n1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 6, 0.0 ), 0.0, 0.0 ) );
+					float4 n2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 8, 0.0 ), 0.0, 0.0 ) );
 					
 					float2 uv0 = float2( v0.w, n0.x );
 					float2 uv1 = float2( v1.w, n1.x );
@@ -75,7 +76,8 @@ float4 CoreTrace( float3 eye, float3 dir )
 					//return float4( tbary.yzw, 1.0 );
 					//return float4( norm, 1.0 );
 					minz = tbary.x;
-					col = tex2D( _EmissionTex, uv );
+					col = tex2Dlod( _EmissionTex, float4( uv, 0.0, 0.0 ) );
+					uvo = uv;
 					
 				}
 				
@@ -93,6 +95,7 @@ float4 CoreTrace( float3 eye, float3 dir )
 			ptr = truefalse.zw;
 		}
 	}
-	while( i++ < 4096 && ptr.x >= 0 );
+	
+	z = minz;
 	return col;
 }
