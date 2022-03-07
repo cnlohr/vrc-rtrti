@@ -10,12 +10,15 @@
 		_GeoTex ("Geometry", 2D) = "black" {}
 		_DiffuseUse( "Diffuse Use", float ) = .1
 		_MediaBrightness( "Media Brightness", float ) = 1.2
-		_UVScale(  "UV Scale", Vector ) = ( 2, 2, 0, 0 )
 		_RoughnessIntensity( "Roughness Intensity", float ) = 3.0
 		_RoughnessShift( "Roughness Shift", float ) = 0.0
 		_NormalizeValue("Normalize Value", float) = 0.0
 		_RoughAdj("Roughness Adjust", float) = 0.3
 		_Flip("Flip Mirror Enable", float ) =0.0
+		_MirrorPlace("Mirror Place", Vector ) = ( 0, 0, 0, 0)
+		_MirrorScale("Mirror Enable", Vector ) = ( 0, 0, 0, 0)
+		_MirrorRotation("Mirror Rotation", Vector ) = ( 0, 0, 0, 0)
+		_OverrideReflection( "Override Reflection", float)=0.0
 		[HDR] _Ambient("Ambient Color", Color) = (0.1,0.1,0.1,1.0)
     }
     SubShader
@@ -33,12 +36,15 @@
 
 		sampler2D _BumpMap, _MainTex, _Roughness, _Metallicity;
 		float _DiffuseUse, _MediaBrightness;
-		float4 _UVScale;
 		float _RoughnessIntensity, _RoughnessShift;
 		float _NormalizeValue;
 		float _RoughAdj;
 		float _Flip;
 		float4 _Ambient;
+		float3 _MirrorPlace;
+		float3 _MirrorScale;
+		float4 _MirrorRotation;
+		float _OverrideReflection;
 
 		#include "trace.cginc"
 
@@ -51,6 +57,26 @@
 			INTERNAL_DATA
         };
 
+		//https://community.khronos.org/t/quaternion-functions-for-glsl/50140/2
+		float3 qtransform( in float4 q, in float3 v )
+		{
+			return v + 2.0*cross(cross(v, q.xyz ) + q.w*v, q.xyz);
+		}
+		
+
+		// Next two https://gist.github.com/mattatz/40a91588d5fb38240403f198a938a593
+		float4 q_conj(float4 q)
+		{
+			return float4(-q.x, -q.y, -q.z, q.w);
+		}
+
+		// https://jp.mathworks.com/help/aeroblks/quaternioninverse.html
+		float4 q_inverse(float4 q)
+		{
+			float4 conj = q_conj(q);
+			return conj / (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+		}
+		
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
             // Albedo comes from a texture tinted by color
@@ -66,30 +92,34 @@
 
 			float z;
 			float2 uvo;
-			float4 col = CoreTrace( IN.worldPos, worldRefl, z, uvo ) * _MediaBrightness;
+			float4 col = CoreTrace( IN.worldPos+worldRefl*.001, worldRefl, z, uvo ) * _MediaBrightness;
 			if( uvo.x > 1.0 ) col = 0.0;
 
-				
+			float3 debug = 0.0;
 			// Test if we need to reverse-cast through a mirror.
 			if( _Flip > 0.5 )
 			{
-				float3 mirror_pos = float3( -12, 1.5, 0 );
-				float3 mirror_size = float3( 0, 3, 9 );
-				float3 mirror_n = float3( 1, 0, 0 );
+				debug = 0;
+				float3 mirror_pos = _MirrorPlace;//float3( -12, 1.5, 0 );
+				float3 mirror_size = qtransform( q_inverse(_MirrorRotation), _MirrorScale );
+				float3 mirror_n = qtransform( q_inverse(_MirrorRotation), float3( 0, 0, -1 ) );
 
-				float3 revray = float3( -worldRefl.x, worldRefl.yz );
+				float3 revray = reflect( worldRefl, mirror_n ); //float3( -worldRefl.x, worldRefl.yz );
 				float3 revpos = IN.worldPos;
 				
 				// Make sure this ray intersects the mirror.
 				float mirrort = dot( mirror_pos - IN.worldPos, mirror_n ) / dot( worldRefl, mirror_n );
 				float3 mirrorp = IN.worldPos + worldRefl * mirrort;
-				if( all( abs( mirrorp.yz - mirror_pos.yz ) - mirror_size.yz/2 < 0 ) )
-				{
 				
-					revpos.x = -(revpos.x - mirror_pos) + mirror_pos;
+				float3 relative_intersection = qtransform( q_inverse(_MirrorRotation),(mirrorp));
+				if( _OverrideReflection > 0.5 || all( abs( relative_intersection.xy ) - mirror_size.zy/2 < 0 ) )
+				{
+					//revpos.x = -(revpos.x - mirror_pos) + mirror_pos;
+					revpos = mirror_pos+reflect( revpos - mirror_pos, mirror_n );
 
 					float z2;
 					float4 c2 = CoreTrace( revpos, revray, z2, uvo ) * _MediaBrightness;
+					if( uvo.x > 1.0 ) col = 0.0;
 					if( z2 < z )
 					{
 						col = c2;
@@ -100,6 +130,8 @@
 				
 			if( z > 1e10 )
 				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal )*.5;
+			
+			if( length( debug )> 0.0 ) col.rgb = debug;			
 			
 			float rough = 1.0-tex2D(_Roughness, IN.uv_MainTex)*_RoughnessIntensity + _RoughnessShift;
 			rough *= _RoughAdj;

@@ -11,11 +11,13 @@ namespace EmissionUpdate
     public class EmissiveUpdater2 : UdonSharpBehaviour
     {
         MeshRenderer rendererToUpdate;
+		public Material matToUpdate;
 
         void Start()
         {
             rendererToUpdate = GetComponent<MeshRenderer>();
             RendererExtensions.UpdateGIMaterials(rendererToUpdate);
+			matToUpdate.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
         }
 
         private void Update()

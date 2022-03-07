@@ -15,8 +15,8 @@ float4 CoreTrace( float3 eye, float3 dir, out float z, out float2 uvo )
 	[loop]
 	while( i++ < 4096 && ptr.x >= 0 )
 	{
-		value = tex2D( _GeoTex, ptr );
-		truefalse = tex2D( _GeoTex, ptr + float2( _GeoTex_TexelSize.x, 0 ) );
+		value = tex2Dlod( _GeoTex, float4( ptr, 0, 0) );
+		truefalse = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x, 0 ), 0, 0 ) );
 		
 		// Ray-Sphere Intersection, but with normalized dir, and 0 offset.
 		value.xyz = value.xyz - eye;

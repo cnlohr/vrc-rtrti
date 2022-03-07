@@ -77,6 +77,7 @@ Material:
     - _DetailNormalMapScale: 1
     - _DiffuseUse: 1
     - _DstBlend: 0
+    - _Flip: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
@@ -85,10 +86,11 @@ Material:
     - _Mode: 0
     - _NormalizeValue: 2
     - _OcclusionStrength: 1
+    - _OverrideReflection: 0
     - _Parallax: 0.02
     - _RoughAdj: 1
-    - _RoughnessIntensity: 2
-    - _RoughnessShift: 0.12
+    - _RoughnessIntensity: 3
+    - _RoughnessShift: 0.16
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -98,4 +100,7 @@ Material:
     - _Ambient: {r: 0.06, g: 0.06, b: 0.06, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _MirrorPlace: {r: -12, g: 1.5, b: 0, a: 0}
+    - _MirrorRotation: {r: -0, g: -0.7071068, b: -0, a: 0.7071068}
+    - _MirrorScale: {r: 9, g: 3, b: 1, a: 0}
     - _UVScale: {r: 2, g: 2, b: 0, a: 0}

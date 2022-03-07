@@ -5,10 +5,8 @@
         _MainTex ("Texture", 2D) = "white" {}
 		_MainIntensity ("Intensity", float ) = 1.5
 
-		_GIAlbedoTex ("Texture GI Albedo", 2D) = "white" {}
 		_GIEmissionTex ("Texture GI Emission", 2D) = "white" {}
 		_GIEmissionMux ("GI Emission Mux", float) = 10.0 
-		_GIAlbedoMux ("GI Emission Mux", float) = 10.0 
     }
 
 	CGINCLUDE
@@ -29,7 +27,7 @@
             #pragma vertex vert
             #pragma fragment frag
             // make fog work
-            #pragma multi_compile_fog
+            #pragma multi_compile_fog nometa
 
             #include "UnityCG.cginc"
 
@@ -72,7 +70,7 @@
 		
 		
 		
-/*
+
         // ------------------------------------------------------------------
         // Extracts information for lightmapping, GI (emission, albedo, ...)
         // This pass it not used during regular rendering.
@@ -94,11 +92,8 @@
 			
             #include "UnityStandardMeta.cginc"
 			
-            sampler2D _GIAlbedoTex;
 			sampler2D _GIEmissionTex;
 
-            fixed4 _GIAlbedoTex_ST;
-            float _GIAlbedoMux;
 			float _GIEmissionMux;
 			
 			float4 frag_meta2 (v2f_meta i) : SV_Target
@@ -110,54 +105,14 @@
 				UnityMetaInput o;
 				UNITY_INITIALIZE_OUTPUT(UnityMetaInput, o);
 
-				fixed4 c = tex2D (_GIAlbedoTex, i.uv);
-                o.Albedo = fixed3(c.rgb * _GIAlbedoMux);
-
-				c = tex2D(_GIEmissionTex, i.uv);
+	
+				float4 c = tex2D(_GIEmissionTex, i.uv);
                 o.Emission = fixed3(c.rgb * _GIEmissionMux);
-				o.Albedo = o.Emission = 10.;
+				//o.Albedo = o.Emission = 0.;
 				return UnityMetaFragment(o);
 			}
 
             ENDCG
         }
-*/
-
-
-
-            Pass
-            {
-                Name "META"
-                Tags {"LightMode"="Meta"}
-                Cull Off
-                CGPROGRAM
-     
-                #include"UnityStandardMeta.cginc"
-     
-                sampler2D _GIAlbedoTex;
-                fixed4 _GIAlbedoColor;
-                float4 frag_meta2 (v2f_meta i): SV_Target
-                {
-                    // we're interested in diffuse & specular colors,
-                    // and surface roughness to produce final albedo.
-                   
-                    FragmentCommonData data = UNITY_SETUP_BRDF_INPUT (i.uv);
-                    UnityMetaInput o;
-                    UNITY_INITIALIZE_OUTPUT(UnityMetaInput, o);
-                    fixed4 c = tex2D (_GIAlbedoTex, i.uv);
-                    o.Albedo = fixed3(c.rgb * _GIAlbedoColor.rgb);
-                    o.Emission = Emission(i.uv.xy);
-                    return UnityMetaFragment(o);
-                }
-               
-                #pragma vertex vert_meta
-                #pragma fragment frag_meta2
-                #pragma shader_feature _EMISSION
-                #pragma shader_feature _METALLICGLOSSMAP
-                #pragma shader_feature ___ _DETAIL_MULX2
-                ENDCG
-            }
-			
-			
     }
 }
