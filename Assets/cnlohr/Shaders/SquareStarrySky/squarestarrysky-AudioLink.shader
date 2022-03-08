@@ -141,7 +141,11 @@ SubShader {
 				fixed2 rn = chash23(id).xy;
 				fixed c2 = 1.-smoothstep(0.,.6,length(q));
 				c2 *= step(rn.x,.0005+i*i*0.001);
-				c += c2*((1-fixed3(0.75,0.9,1.)*rn.y)*0.1+0.9)*(AudioLinkLerp( ALPASS_AUDIOLINK + float2( dir.x * AUDIOLINK_WIDTH, i+1 ) )*3+.5);
+				float AL = AudioLinkLerp( ALPASS_AUDIOLINK + float2( dir.x * AUDIOLINK_WIDTH, i+1 ) );
+				if( _ScreenParams.x == _ScreenParams.y )
+					AL = 0.5;
+				
+				c += c2*((1-fixed3(0.75,0.9,1.)*rn.y)*0.1+0.9)*(AL*3+.5);
 				p *= 1.3;
 			}
 			return c*c*.25;
