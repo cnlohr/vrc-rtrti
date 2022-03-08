@@ -62,7 +62,7 @@ float4 CoreTrace( float3 eye, float3 dir, out float z, out float2 uvo )
 							dot( Q, dir ) ), 0.0 );
 				tbary.w = 1.0 - tbary.y - tbary.z;
 
-				if( all( tbary.xyzw >= 0 ) && tbary.x < minz )
+				if( all( tbary.xyzw >= 0 ) && tbary.x < minz && dot( N, dir ) > 0 )
 				{
 					float4 n0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 4, 0.0 ), 0.0, 0.0 ) );
 					float4 n1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 6, 0.0 ), 0.0, 0.0 ) );

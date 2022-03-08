@@ -20,6 +20,14 @@ public class MatAndInteractToggle : UdonSharpBehaviour
 	Vector3 originalMirrorP;
 	bool bSetOriginal = false;
 
+	void Start()
+	{
+		foreach (Material m in matFlip)
+		{
+			m.SetFloat( "_Flip", toggleObject.activeSelf?1.0f:0.0f );
+		}
+	}
+
 	public override void Interact()
 	{
 		if( !bSetOriginal )

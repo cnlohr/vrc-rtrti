@@ -17,6 +17,14 @@ public class MatInteractToggle : UdonSharpBehaviour
 	public Material[] matFlip;
 	public bool bOn;
 
+	void Start()
+	{
+		foreach (Material m in matFlip)
+		{
+			m.SetFloat( "_OverrideReflection", bOn?1.0f:0.0f );
+		}
+	}
+
 	public override void Interact()
 	{
 		bOn = !bOn;

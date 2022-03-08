@@ -415,7 +415,7 @@ SubShader {
 				(_SquareTheSun)?
 				max( max( delta.x, delta.y ), max( delta.x, delta.z ) ) :
 				length(delta);
-			dist/=(AudioLinkLerp( ALPASS_AUDIOLINK )*0+1)*3;
+			dist/=(AudioLinkLerp( ALPASS_AUDIOLINK )*0+1)*2;
             half spot = 1.0 - smoothstep(0.0, _SunSize, dist);
             return spot * spot;
         #else // SKYBOX_SUNDISK_HQ

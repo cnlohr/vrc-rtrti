@@ -94,7 +94,7 @@
 
 			float z;
 			float2 uvo;
-			float epsilon = 0.004;
+			float epsilon = 0.01;
 			float4 col = CoreTrace( IN.worldPos+worldRefl*epsilon, worldRefl, z, uvo ) * _MediaBrightness;
 			if( uvo.x > 1.0 ) col = 0.0;
 
@@ -121,7 +121,7 @@
 					revpos = mirror_pos+reflect( revpos - mirror_pos, mirror_n );
 
 					float z2;
-					float4 c2 = CoreTrace( revpos, revray, z2, uvo ) * _MediaBrightness;
+					float4 c2 = CoreTrace( revpos+revray*epsilon, revray, z2, uvo ) * _MediaBrightness;
 					if( uvo.x > 1.0 ) col = 0.0;
 					if( z2 < z )
 					{
