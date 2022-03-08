@@ -18,6 +18,7 @@ namespace EmissionUpdate
             rendererToUpdate = GetComponent<MeshRenderer>();
             RendererExtensions.UpdateGIMaterials(rendererToUpdate);
 			matToUpdate.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+			Debug.Log( "Emissive Updater Start" );
         }
 
         private void Update()

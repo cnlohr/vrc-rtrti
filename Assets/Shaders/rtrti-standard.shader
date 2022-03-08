@@ -19,6 +19,7 @@
 		_MirrorScale("Mirror Enable", Vector ) = ( 0, 0, 0, 0)
 		_MirrorRotation("Mirror Rotation", Vector ) = ( 0, 0, 0, 0)
 		_OverrideReflection( "Override Reflection", float)=0.0
+		_SkyboxBrightness("Skybox Brightness", float) = 1.0
 		[HDR] _Ambient("Ambient Color", Color) = (0.1,0.1,0.1,1.0)
     }
     SubShader
@@ -45,6 +46,7 @@
 		float3 _MirrorScale;
 		float4 _MirrorRotation;
 		float _OverrideReflection;
+		float _SkyboxBrightness;
 
 		#include "trace.cginc"
 
@@ -92,7 +94,8 @@
 
 			float z;
 			float2 uvo;
-			float4 col = CoreTrace( IN.worldPos+worldRefl*.001, worldRefl, z, uvo ) * _MediaBrightness;
+			float epsilon = 0.004;
+			float4 col = CoreTrace( IN.worldPos+worldRefl*epsilon, worldRefl, z, uvo ) * _MediaBrightness;
 			if( uvo.x > 1.0 ) col = 0.0;
 
 			float3 debug = 0.0;
@@ -129,7 +132,7 @@
 			}
 				
 			if( z > 1e10 )
-				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal )*.5;
+				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldRefl )*_SkyboxBrightness;
 			
 			if( length( debug )> 0.0 ) col.rgb = debug;			
 			

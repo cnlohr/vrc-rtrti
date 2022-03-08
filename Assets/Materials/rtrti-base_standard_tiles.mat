@@ -91,6 +91,7 @@ Material:
     - _RoughAdj: 0.25
     - _RoughnessIntensity: -151.1
     - _RoughnessShift: 0.7
+    - _SkyboxBrightness: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1

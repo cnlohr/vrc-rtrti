@@ -16,7 +16,7 @@ int OpenOBJ( const char * name, float ** tridata, int * tricount )
 	//float * tridata; // x, y, z, tcx, tcy, nx, ny, nz
 	//int tricount;
 
-	FILE * f = fopen( "TestScene.obj", "r" );
+	FILE * f = fopen( name, "r" );
 	if( !f || ferror( f ) )
 	{
 		fprintf( stderr, "Error: could not open model file.\n" );
@@ -200,7 +200,6 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 		float l1 = dist3d( m, tv+8 );
 		float l2 = dist3d( m, tv+16 );
 		m[3] = (l0>l1)?(l0>l2)?l0:l2:(l1>l2)?l1:l2;
-		printf( "%d / %f %f %f / %f\n", i, tv[0], tv[8], tv[16], m[3] );
 		pairs[i].triangle_number = i;
 	}
 	
@@ -212,7 +211,7 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 	do
 	{
 		any_left = 0;
-		int besti, bestj;
+		int besti = -1, bestj = -1;
 		float smallestr = 1e20;
 		int i, j;
 		for( j = 0; j < nrpairs; j++ )
@@ -226,6 +225,7 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 				if( ip->parent ) continue; // Already inside a tree.
 				any_left = 1;
 				float dist = dist3d( jp->xyzr, ip->xyzr ) + jp->xyzr[3] + ip->xyzr[3];
+
 				if( dist < smallestr )
 				{
 					smallestr = dist;
@@ -235,9 +235,16 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 			}
 		}
 		if (!any_left) break;
+		if ( besti < 0 || bestj < 0 )
+		{
+			fprintf( stderr, "Error with tree assembly\n" );
+			return 0;
+		}
+		
 		// Pair them up.
 		struct BVHPair * jp = pairs+bestj;
-		struct BVHPair * ip = pairs+besti;	
+		struct BVHPair * ip = pairs+besti;
+		//printf( "%d %p %d %p %d\n", besti, ip->parent, bestj, jp->parent, nrpairs );
 		struct BVHPair * parent = pairs + nrpairs;
 		parent->a = jp;
 		parent->b = ip;
@@ -274,9 +281,19 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 			float * c2 = jp->xyzr;
 			float clen = lenji;
 			float R = ( r1 + r2 + clen )/2;
-			xyzr[0] = c1[0] + ( c2[0] - c1[0] ) * (R - r1) / clen;
-			xyzr[1] = c1[1] + ( c2[1] - c1[1] ) * (R - r1) / clen;
-			xyzr[2] = c1[2] + ( c2[2] - c1[2] ) * (R - r1) / clen;
+			if( clen < 0.00001 )
+			{
+				// You get this if you have duplicate geometry (or opposite facing geometry)
+				xyzr[0] = c1[0];
+				xyzr[1] = c1[1];
+				xyzr[2] = c1[2];
+			}
+			else
+			{
+				xyzr[0] = c1[0] + ( c2[0] - c1[0] ) * (R - r1) / clen;
+				xyzr[1] = c1[1] + ( c2[1] - c1[1] ) * (R - r1) / clen;
+				xyzr[2] = c1[2] + ( c2[2] - c1[2] ) * (R - r1) / clen;
+			}
 			xyzr[3] = R;
 			printf( "Join %d\n", nrpairs );
 #if 0
@@ -305,8 +322,8 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 	return pairs + nrpairs - 1;
 }
 
-#define TEXW 256
-#define TEXH 256
+#define TEXW 512
+#define TEXH 512
 float asset2d[TEXH][TEXW][4];
 int lineallocations[TEXH];
 int totalallocations;
@@ -452,13 +469,14 @@ int main( )
 {
 	float * tridata = 0;
 	int tricount = 0;
-	if( OpenOBJ( "TestScene.obj", &tridata, &tricount ) <= 0 )
+	if( OpenOBJ( "LowQuality.obj", &tridata, &tricount ) <= 0 )
 	{
 		fprintf( stderr, "Error: couldn't open OBJ file\n" );
 		return -1;
 	}
 	
-	struct BVHPair * allpairs = calloc( sizeof( struct BVHPair ), tricount*2 );
+	printf( "TRICOUNT: %d\n", tricount );
+	struct BVHPair * allpairs = calloc( sizeof( struct BVHPair ), tricount*2+3 );
 	struct BVHPair * root = BuildBVH( allpairs, tridata, tricount );
 
 	if( AllocateBVH( root ) < 0 )

@@ -89,8 +89,9 @@ Material:
     - _OverrideReflection: 0
     - _Parallax: 0.02
     - _RoughAdj: 0.2
-    - _RoughnessIntensity: 3
-    - _RoughnessShift: 0
+    - _RoughnessIntensity: -33.86
+    - _RoughnessShift: 0.8
+    - _SkyboxBrightness: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
