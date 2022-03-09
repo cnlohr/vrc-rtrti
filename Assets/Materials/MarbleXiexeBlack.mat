@@ -72,6 +72,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
+    - _AlbedoBoost: 1
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
@@ -83,6 +84,8 @@ Material:
     - _GlossyReflections: 1
     - _MediaBrightness: 1.2
     - _Metallic: 0
+    - _MetallicMux: 1
+    - _MetallicShift: 0
     - _Mode: 0
     - _NormalizeValue: 0
     - _OcclusionStrength: 1
@@ -92,6 +95,8 @@ Material:
     - _RoughnessIntensity: -144.46
     - _RoughnessShift: 0.8
     - _SkyboxBrightness: 1.5
+    - _SmoothnessMux: 1
+    - _SmoothnessShift: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1

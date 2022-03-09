@@ -143,7 +143,7 @@ SubShader {
 				c2 *= step(rn.x,.0005+i*i*0.001);
 				float AL = AudioLinkLerp( ALPASS_AUDIOLINK + float2( dir.x * AUDIOLINK_WIDTH, i+1 ) );
 				if( _ScreenParams.x == _ScreenParams.y )
-					AL = 0.5;
+					AL = 0.08;
 				
 				c += c2*((1-fixed3(0.75,0.9,1.)*rn.y)*0.1+0.9)*(AL*3+.5);
 				p *= 1.3;

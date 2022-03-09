@@ -20,6 +20,11 @@
 		_MirrorRotation("Mirror Rotation", Vector ) = ( 0, 0, 0, 0)
 		_OverrideReflection( "Override Reflection", float)=0.0
 		_SkyboxBrightness("Skybox Brightness", float) = 1.0
+		_AlbedoBoost("Albedo Boost", float) = 1.0
+		_MetallicMux("Metallic Mux", float) = 1.0
+		_MetallicShift("Metallic Shift", float) = 0.0
+		_SmoothnessMux("Smooth Mux", float) = 1.0
+		_SmoothnessShift("Smooth Shift", float) = 0.0
 		[HDR] _Ambient("Ambient Color", Color) = (0.1,0.1,0.1,1.0)
     }
     SubShader
@@ -47,6 +52,11 @@
 		float4 _MirrorRotation;
 		float _OverrideReflection;
 		float _SkyboxBrightness;
+		float _AlbedoBoost;
+		float _MetallicMux;
+		float _MetallicShift;
+		float _SmoothnessMux;
+		float _SmoothnessShift;
 
 		#include "trace.cginc"
 
@@ -82,7 +92,7 @@
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
             // Albedo comes from a texture tinted by color
-            fixed4 c = tex2D (_MainTex, IN.uv_MainTex);
+            fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _AlbedoBoost;
 			o.Normal = UnpackNormal (tex2D (_BumpMap, IN.uv_MainTex));
 			o.Normal.z+=_NormalizeValue;
 			o.Normal = normalize(o.Normal);
@@ -144,8 +154,8 @@
 
 			//c = 1.0;
             o.Albedo = c.rgb*(_DiffuseUse);
-            o.Metallic = tex2D (_Metallicity, IN.uv_MainTex);
-            o.Smoothness = tex2D (_Roughness, IN.uv_MainTex);
+            o.Metallic = tex2D (_Metallicity, IN.uv_MainTex) * _MetallicMux + _MetallicShift;
+            o.Smoothness = tex2D (_Roughness, IN.uv_MainTex) * _SmoothnessMux + _SmoothnessShift;
 			o.Emission = max(col,0) + c.rgb * _Ambient;
             o.Alpha = c.a;
         }

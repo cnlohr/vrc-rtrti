@@ -322,8 +322,8 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 	return pairs + nrpairs - 1;
 }
 
-#define TEXW 512
-#define TEXH 512
+#define TEXW 256
+#define TEXH 256
 float asset2d[TEXH][TEXW][4];
 int lineallocations[TEXH];
 int totalallocations;

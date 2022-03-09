@@ -24,7 +24,7 @@
 		Pass
 		{
 			AlphaToMask True 
-
+			Cull Off
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
@@ -78,7 +78,7 @@
 				{
 				}
 				*/
-				col = tex2D(_MainTex, uv);
+				col = tex2Dbias(_MainTex, float4( uv, 0.0, -.8 ));
 				
 				col *=_MainIntensity;
 				// apply fog
