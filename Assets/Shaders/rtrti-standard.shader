@@ -100,18 +100,18 @@
 
 			float3 worldViewDir = normalize(UnityWorldSpaceViewDir(IN.worldPos));
 			float3 worldRefl = reflect(-worldViewDir, worldNormal);
-
+			float4 col = 0.;
 
 			float z;
 			float2 uvo = 0.0;
 			float epsilon = 0.00;
-			float4 col = CoreTrace( IN.worldPos+worldRefl*epsilon, worldRefl, z, uvo ) * _MediaBrightness;
+			col = CoreTrace( IN.worldPos+worldRefl*epsilon, worldRefl, z, uvo ) * _MediaBrightness;
 			if( uvo.x > 1.0 ) col = 0.0;
 
 			float3 debug = 0.0;
 			// Test if we need to reverse-cast through a mirror.
-			if( _Flip > 0.5 )
-			{
+			//if( _Flip > 0.5 )
+			if( 0 ) {
 				debug = 0;
 				float3 mirror_pos = _MirrorPlace;//float3( -12, 1.5, 0 );
 				float3 mirror_size = qtransform( q_inverse(_MirrorRotation), _MirrorScale );

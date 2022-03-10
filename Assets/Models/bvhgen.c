@@ -45,7 +45,7 @@ int OpenOBJ( const char * name, float ** tridata, int * tricount )
 				vertex_count++;
 				vertices = realloc( vertices, vertex_count * 3 * sizeof( float ) );
 				float * vend = vertices + (vertex_count - 1) * 3;
-				printf( "%p %p %d %p\n", vend, vertices, vertex_count, f );
+				//printf( "%p %p %d %p\n", vend, vertices, vertex_count, f );
 				if( fscanf( f, "%f %f %f", vend, vend+1, vend+2 ) != 3 )
 				{
 					fprintf( stderr, "Error parsing vertices on line %d\n", line );
@@ -145,7 +145,7 @@ struct BVHPair
 	struct BVHPair * a;
 	struct BVHPair * b;
 	struct BVHPair * parent;
-	float xyzr[4];
+	float centerextents[8];
 	int triangle_number; /// If -1 is a inner node.
 	int x, y; // Start
 	int w, h; // Size (right now 2 for bv, 8 for triangle)
@@ -183,6 +183,76 @@ void mul3d( float * val, float mag)
 	val[2] = val[2] * mag;
 }
 
+void GetTreeExtents( struct BVHPair * pairs, const float * tridata, float * mins, float * maxs )
+{
+	if( pairs->a ) GetTreeExtents( pairs->a, tridata, mins, maxs );
+	if( pairs->b ) GetTreeExtents( pairs->b, tridata, mins, maxs );
+	int t = pairs->triangle_number;
+	if( t >= 0 )
+	{
+		const float * tv = tridata + t*24;	
+		if( tv[0] > maxs[0] ) maxs[0] = tv[0]; if( tv[0] < mins[0] ) mins[0] = tv[0];
+		if( tv[1] > maxs[1] ) maxs[1] = tv[1]; if( tv[1] < mins[1] ) mins[1] = tv[1];
+		if( tv[2] > maxs[2] ) maxs[2] = tv[2]; if( tv[2] < mins[2] ) mins[2] = tv[2];
+
+		if( tv[0+8] > maxs[0] ) maxs[0] = tv[0+8]; if( tv[0+8] < mins[0] ) mins[0] = tv[0+8];
+		if( tv[1+8] > maxs[1] ) maxs[1] = tv[1+8]; if( tv[1+8] < mins[1] ) mins[1] = tv[1+8];
+		if( tv[2+8] > maxs[2] ) maxs[2] = tv[2+8]; if( tv[2+8] < mins[2] ) mins[2] = tv[2+8];
+
+		if( tv[0+16] > maxs[0] ) maxs[0] = tv[0+16]; if( tv[0+16] < mins[0] ) mins[0] = tv[0+16];
+		if( tv[1+16] > maxs[1] ) maxs[1] = tv[1+16]; if( tv[1+16] < mins[1] ) mins[1] = tv[1+16];
+		if( tv[2+16] > maxs[2] ) maxs[2] = tv[2+16]; if( tv[2+16] < mins[2] ) mins[2] = tv[2+16];
+	}
+}
+
+float GetTreeMaxr( struct BVHPair * pairs, const float * tridata, const float * point, float maxr )
+{
+	float r;
+	if( pairs->a )
+	{
+		r = GetTreeMaxr( pairs->a, tridata, point, maxr );
+		if( r > maxr ) maxr = r;
+	}
+	if( pairs->b )
+	{
+		r = GetTreeMaxr( pairs->b, tridata, point, maxr );
+		if( r > maxr ) maxr = r;
+	}
+	int t = pairs->triangle_number;
+	if( t >= 0 )
+	{
+		const float * tv = tridata + t*24;	
+		float d;
+		d = tv[0]-point[0]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+		d = tv[1]-point[1]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+		d = tv[2]-point[2]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+
+		d = tv[0+8]-point[0]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+		d = tv[1+8]-point[1]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+		d = tv[2+8]-point[2]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+
+		d = tv[0+16]-point[0]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+		d = tv[1+16]-point[1]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+		d = tv[2+16]-point[2]; if( d < 0 ) d = -d; if( d > maxr ) maxr = d;
+	}
+	return maxr;
+}
+
+void GetCenterExtentsForTree( struct BVHPair * pairs, float * tridata, float * centerextents )
+{
+	float mins[3] = { 1e20, 1e20, 1e20 };
+	float maxs[3] = {-1e20,-1e20,-1e20 };
+	GetTreeExtents( pairs, tridata, mins, maxs );
+	centerextents[0] = (maxs[0]+mins[0])/2;
+	centerextents[1] = (maxs[1]+mins[1])/2;
+	centerextents[2] = (maxs[2]+mins[2])/2;
+	centerextents[4] = (maxs[0]-mins[0]);
+	centerextents[5] = (maxs[1]-mins[1]);
+	centerextents[6] = (maxs[2]-mins[2]);
+	centerextents[7] = centerextents[4] + centerextents[5] + centerextents[6]; // Heuristic
+}
+
+
 struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount )
 {
 	memset( pairs, 0, sizeof( pairs ) );
@@ -191,18 +261,12 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 	int i;
 	for( i = 0; i < tricount; i++ )
 	{
-		float * tv = tridata + i*24;
-		float * m = pairs[i].xyzr;
-		m[0] = (tv[0] + tv[8] + tv[16])/3;
-		m[1] = (tv[1] + tv[9] + tv[17])/3;
-		m[2] = (tv[2] + tv[10] + tv[18])/3;
-		float l0 = dist3d( m, tv+0 );
-		float l1 = dist3d( m, tv+8 );
-		float l2 = dist3d( m, tv+16 );
-		m[3] = (l0>l1)?(l0>l2)?l0:l2:(l1>l2)?l1:l2;
 		pairs[i].triangle_number = i;
+		GetCenterExtentsForTree( pairs + i, tridata, pairs[i].centerextents );
+		printf( "%d  %f %f %f  %f %f %f\n", i, pairs[i].centerextents[0], pairs[i].centerextents[1], pairs[i].centerextents[2], pairs[i].centerextents[4], pairs[i].centerextents[5], pairs[i].centerextents[6]  );
 	}
-	
+
+	printf( "------------------------------------------\n");
 	nrpairs = i;
 
 	// Now, pairs from 0..tricount are leaf (Triangle) nodes on up.
@@ -212,24 +276,35 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 	{
 		any_left = 0;
 		int besti = -1, bestj = -1;
-		float smallestr = 1e20;
+		float smallestq = 1e20;
 		int i, j;
 		for( j = 0; j < nrpairs; j++ )
 		{
 			struct BVHPair * jp = pairs+j;
 			if( jp->parent ) continue; // Already inside a tree.
-			if( jp->xyzr[3] > smallestr ) continue;
+			if( jp->centerextents[7] > smallestq ) continue;  //XXX TODO WHY NO WORK?
 			for( i = j+1; i < nrpairs; i++ )
 			{
 				if( i == j ) continue;
 				struct BVHPair * ip = pairs+i;
 				if( ip->parent ) continue; // Already inside a tree.
 				any_left = 1;
-				float dist = dist3d( jp->xyzr, ip->xyzr ) + jp->xyzr[3] + ip->xyzr[3];
+				
+				// Compute BB from these two objects, and find heuristic size.
+				float newmax[3] = {
+					( ip->centerextents[0] > jp->centerextents[0] ) ? ip->centerextents[0] : jp->centerextents[0],
+					( ip->centerextents[1] > jp->centerextents[1] ) ? ip->centerextents[1] : jp->centerextents[1], 
+					( ip->centerextents[2] > jp->centerextents[2] ) ? ip->centerextents[2] : jp->centerextents[2] };
+				float newmin[3] = {
+					( ip->centerextents[0] < jp->centerextents[0] ) ? ip->centerextents[0] : jp->centerextents[0],
+					( ip->centerextents[1] < jp->centerextents[1] ) ? ip->centerextents[1] : jp->centerextents[1],
+					( ip->centerextents[2] < jp->centerextents[2] ) ? ip->centerextents[2] : jp->centerextents[2] };
+				float q = ( newmax[0] - newmin[0] ) + (newmax[1] - newmin[1]) + (newmax[2] - newmin[2]);
+				//XXX TODO: WEIGHT TREE HEIGHT?
 
-				if( dist < smallestr )
+				if( q < smallestq )
 				{
-					smallestr = dist;
+					smallestq = q;
 					besti = i;
 					bestj = j;
 				}
@@ -250,6 +325,11 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 		parent->a = jp;
 		parent->b = ip;
 		parent->triangle_number = -1;
+		// Greedily find new optimal sphere.
+		GetCenterExtentsForTree( parent, tridata, parent->centerextents );
+		printf( "%d  %f %f %f  %f %f %f\n", i, pairs[i].centerextents[0], pairs[i].centerextents[1], pairs[i].centerextents[2], pairs[i].centerextents[4], pairs[i].centerextents[5], pairs[i].centerextents[6]  );
+
+/*
 		// Tricky - joining two spheres. 
 		float * xyzr = parent->xyzr;
 		float vecji[3] = { jp->xyzr[0] - ip->xyzr[0], jp->xyzr[1] - ip->xyzr[1], jp->xyzr[2] - ip->xyzr[2] };
@@ -312,8 +392,7 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 				xyzr[0], xyzr[1], xyzr[2], xyzr[3] );
 #endif
 		}
-		
-		// XXX TODO: OPTIMIZATION: Greedily find new center.
+		*/
 		
 		jp->parent = parent;
 		ip->parent = parent;
@@ -331,6 +410,7 @@ int totalallocations;
 int trianglecount;
 int bvhcount;
 
+// Assume double-line allocation
 int Allocate( int pixels, int * x, int * y )
 {
 	pixels = (pixels+1)/2; // Alternate top/bottom
@@ -352,7 +432,7 @@ int Allocate( int pixels, int * x, int * y )
 
 int AllocateBVH( struct BVHPair * tt )
 {
-	tt->h = 1;
+	tt->h = 2;
 	tt->w = (tt->triangle_number<0)?2:10;
 
 	if( Allocate( tt->w, &tt->x, &tt->y ) < 0 )
@@ -422,10 +502,17 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 		hitmiss[3] = -1;
 	}
 
-	memcpy( asset2d[y][x], tt->xyzr, sizeof( float ) * 4 );
-	asset2d[y][x][3] = asset2d[y][x][3] * asset2d[y][x][3];// Tricky: We do r^2 because that makes the math work out better in the shader.
+	//memcpy( asset2d[y][x], tt->centerextents, sizeof( float ) * 8 );
+	//asset2d[y][x][3] = asset2d[y][x][3] * asset2d[y][x][3];// Tricky: We do r^2 because that makes the math work out better in the shader.
 
-	printf( "%d %d %d\n", tt->triangle_number, x, y );
+	asset2d[y][x][0] = tt->centerextents[0] - tt->centerextents[4] / 2.0;
+	asset2d[y][x][1] = tt->centerextents[1] - tt->centerextents[5] / 2.0;
+	asset2d[y][x][2] = tt->centerextents[2] - tt->centerextents[6] / 2.0;
+	asset2d[y][x][4] = tt->centerextents[0] + tt->centerextents[4] / 2.0;
+	asset2d[y][x][5] = tt->centerextents[1] + tt->centerextents[5] / 2.0;
+	asset2d[y][x][6] = tt->centerextents[2] + tt->centerextents[6] / 2.0;
+
+	printf( "%d %d %d  %f %f   %f %f\n", tt->triangle_number, x, y, hitmiss[0], hitmiss[1], hitmiss[2], hitmiss[3] );
 	if( tt->triangle_number >= 0 )
 	{
 		// Just FYI for this hitmiss[0] / 1 will be negative
@@ -439,7 +526,7 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 		float norm[3];
 		cross3d( norm, dA, dB );
 		mul3d( norm, 1.0/mag3d( norm ) );
-		memcpy( asset2d[y][x+1], norm, sizeof(float)*3 );
+		memcpy( asset2d[y+1][x+1], norm, sizeof(float)*3 );
 		
 	}
 

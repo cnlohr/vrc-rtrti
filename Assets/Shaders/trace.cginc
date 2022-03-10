@@ -2,47 +2,51 @@ sampler2D _GeoTex;
 float4 _GeoTex_TexelSize;
 sampler2D _EmissionTex;
 
+float max_component( float3 v )
+{
+	return max( max( v.x, v.y ), v.z );
+}
+float min_component( float3 v )
+{
+	return min( min( v.x, v.y ), v.z );
+}
+
 float4 CoreTrace( float3 eye, float3 dir, out float z, out float2 uvo )
 {
 	dir = normalize( dir );
 	float4 col = 0.;
 	float2 ptr = float2( 0, 0 );
-	float4 value;
+	float4 mincorner;
+	float4 maxcorner;
 	float4 truefalse;
 	int i = 0;
 	float minz = 1e20;
+	float3 invd = 1.0 / dir;
+
+	uvo = 0.;
+	z = 10;
 	
 	[loop]
 	while( i++ < 4096 && ptr.x >= 0 )
 	{
-		value = tex2Dlod( _GeoTex, float4( ptr, 0, 0) );
+		mincorner = tex2Dlod( _GeoTex, float4( ptr, 0, 0) );
+		maxcorner = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x, 0 ), 0, 0) );
 		truefalse = tex2Dlod( _GeoTex, float4( ptr + float2( 0, _GeoTex_TexelSize.y ), 0, 0 ) );
 		
-		// Ray-Sphere Intersection, but with normalized dir, and 0 offset.
-		value.xyz = value.xyz - eye;
-		float b = dot( dir, value.xyz ); // Actually would be *2, but we can algebra that out.
-		float c = dot( value.xyz, value.xyz ) - value.w;
-		float det = b * b - c; // a = 1; b is 1/2 "b"
+		float3 t0 = (mincorner - eye) * invd;
+		float3 t1 = (maxcorner - eye) * invd;
+		float3 tmin = min(t0,t1), tmax = max(t0,t1);
 		
-		float radical = sqrt( det ); //Actually 1/2 radical
-		float2 ts = .5*b + float2(radical,-radical);
-		// T is the computed distance to sphere surface.
-		
-		//XXX TODO: Catch if ball is behind us. 
-		// XXX TODO Check math (maybe it's right? maybe I algebrad wrong.
-		det = all( ts < 0 )?-1:det;
-		det = all( ts > minz)?-1:det;
+		col += .02;
 
-		if( det > 0 )
+		if( max_component(tmin) <= min_component(tmax) )
 		{
 			// Intersection
-			
-			//col += .001;
-			
+						
 			if( truefalse.x < 0 )
 			{
 				// Do triangle intersection. If not, set to no intersection.
-				float3 N =  tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 1, 0.0 ), 0.0, 0.0 ) );
+				float3 N =  tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 1, _GeoTex_TexelSize.y ), 0.0, 0.0 ) );
 				float4 v0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, 0.0 ), 0.0, 0.0 ) );
 				float4 v1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 3, 0.0 ), 0.0, 0.0 ) );
 				float4 v2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 4, 0.0 ), 0.0, 0.0 ) );
@@ -76,7 +80,7 @@ float4 CoreTrace( float3 eye, float3 dir, out float z, out float2 uvo )
 					//return float4( tbary.yzw, 1.0 );
 					//return float4( norm, 1.0 );
 					minz = tbary.x;
-					col = tex2Dlod( _EmissionTex, float4( uv, 0.0, 0.0 ) );
+			//		col = tex2Dlod( _EmissionTex, float4( uv, 0.0, 0.0 ) );
 					uvo = uv;
 					
 				}
@@ -94,7 +98,28 @@ float4 CoreTrace( float3 eye, float3 dir, out float z, out float2 uvo )
 			ptr = truefalse.zw;
 		}
 	}
-	
-	z = minz;
+	//col = i;
+	uvo = 0.0;
+//	z = minz;
 	return col;
 }
+
+/* Archive
+
+Fast sphere collision code:
+
+		// Ray-Sphere Intersection, but with normalized dir, and 0 offset.
+		value.xyz = value.xyz - eye;
+		float b = dot( dir, value.xyz ); // Actually would be *2, but we can algebra that out.
+		float c = dot( value.xyz, value.xyz ) - value.w;
+		float det = b * b - c; // a = 1; b is 1/2 "b"
+		
+		float radical = sqrt( det ); //Actually 1/2 radical
+		float2 ts = .5*b + float2(radical,-radical);
+		// T is the computed distance to sphere surface.
+		
+		//XXX TODO: Catch if ball is behind us. 
+		// XXX TODO Check math (maybe it's right? maybe I algebrad wrong.
+		det = all( ts < 0 )?-1:det;
+		det = all( ts > minz)?-1:det;
+*/
