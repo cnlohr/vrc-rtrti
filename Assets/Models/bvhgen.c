@@ -218,7 +218,8 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 		{
 			struct BVHPair * jp = pairs+j;
 			if( jp->parent ) continue; // Already inside a tree.
-			for( i = 0; i < nrpairs; i++ )
+			if( jp->xyzr[3] > smallestr ) continue;
+			for( i = j+1; i < nrpairs; i++ )
 			{
 				if( i == j ) continue;
 				struct BVHPair * ip = pairs+i;
@@ -332,13 +333,14 @@ int bvhcount;
 
 int Allocate( int pixels, int * x, int * y )
 {
+	pixels = (pixels+1)/2; // Alternate top/bottom
 	int i;
-	for( i = 0; i < TEXH; i++ )
+	for( i = 0; i < TEXH/2; i++ )
 	{
 		if( TEXW - lineallocations[i] > pixels )
 		{
 			*x = lineallocations[i];
-			*y = i;
+			*y = i*2;
 			lineallocations[i] += pixels;
 			totalallocations += pixels;
 			return 0;
@@ -351,7 +353,7 @@ int Allocate( int pixels, int * x, int * y )
 int AllocateBVH( struct BVHPair * tt )
 {
 	tt->h = 1;
-	tt->w = (tt->triangle_number<0)?2:9;
+	tt->w = (tt->triangle_number<0)?2:10;
 
 	if( Allocate( tt->w, &tt->x, &tt->y ) < 0 )
 		return -1;
@@ -395,7 +397,7 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	int y = tt->y;
 	
 	int j;
-	float * hitmiss = asset2d[y][x+1];
+	float * hitmiss = asset2d[y+1][x];
 	if( !tt->a )
 	{
 		//XXXX TOOD If we have a "HIT" on a leaf node, what does that mean?
@@ -423,35 +425,13 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	memcpy( asset2d[y][x], tt->xyzr, sizeof( float ) * 4 );
 	asset2d[y][x][3] = asset2d[y][x][3] * asset2d[y][x][3];// Tricky: We do r^2 because that makes the math work out better in the shader.
 
-#if 0
-	if( tt->triangle_number >= 0 )
-	{
-		for( j = 2; j < tt->w; j++ )
-		{
-			if( tt->w < 3 )
-			{
-				asset2d[y][x+j][0] = 1.0;
-				asset2d[y][x+j][1] = 0.0;
-				asset2d[y][x+j][2] = 1.0;
-				asset2d[y][x+j][3] = 1.0;
-			}
-			else
-			{
-				asset2d[y][x+j][0] = 0.0;
-				asset2d[y][x+j][1] = 1.0;
-				asset2d[y][x+j][2] = 0.0;
-				asset2d[y][x+j][3] = 1.0;
-			}
-		}
-	}
-
-#endif
 	printf( "%d %d %d\n", tt->triangle_number, x, y );
 	if( tt->triangle_number >= 0 )
 	{
 		// Just FYI for this hitmiss[0] / 1 will be negative
 		float * this_tri = triangles + tt->triangle_number * 24;
-		memcpy( asset2d[y][x+3], this_tri, sizeof( float ) * 24 );
+		memcpy( asset2d[y+0][x+2], this_tri, sizeof( float ) * 12 );
+		memcpy( asset2d[y+1][x+2], this_tri+12, sizeof( float ) * 12 );
 
 		// Compute the normal to the surface of this triangle.
 		float dA[3] = { this_tri[8] - this_tri[0], this_tri[9] - this_tri[1], this_tri[10] - this_tri[2] };
@@ -459,7 +439,8 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 		float norm[3];
 		cross3d( norm, dA, dB );
 		mul3d( norm, 1.0/mag3d( norm ) );
-		memcpy( asset2d[y][x+2], norm, sizeof(float)*3 );
+		memcpy( asset2d[y][x+1], norm, sizeof(float)*3 );
+		
 	}
 
 	return 0;
