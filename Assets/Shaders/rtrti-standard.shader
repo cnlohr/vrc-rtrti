@@ -9,6 +9,7 @@
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_GeoTex ("Geometry", 2D) = "black" {}
 		_DiffuseUse( "Diffuse Use", float ) = .1
+		_DiffuseShift( "Diffuse Shift", float) = 0.0
 		_MediaBrightness( "Media Brightness", float ) = 1.2
 		_RoughnessIntensity( "Roughness Intensity", float ) = 3.0
 		_RoughnessShift( "Roughness Shift", float ) = 0.0
@@ -41,7 +42,7 @@
 		
 
 		sampler2D _BumpMap, _MainTex, _Roughness, _Metallicity;
-		float _DiffuseUse, _MediaBrightness;
+		float _DiffuseUse, _DiffuseShift, _MediaBrightness;
 		float _RoughnessIntensity, _RoughnessShift;
 		float _NormalizeValue;
 		float _RoughAdj;
@@ -110,8 +111,9 @@
 
 			float3 debug = 0.0;
 			// Test if we need to reverse-cast through a mirror.
-			//if( _Flip > 0.5 )
-			if( 0 ) {
+			if( _Flip > 0.5 ) {
+			//if( 0 ) {
+			//if( 1 ){
 				debug = 0;
 				float3 mirror_pos = _MirrorPlace;//float3( -12, 1.5, 0 );
 				float3 mirror_size = qtransform( q_inverse(_MirrorRotation), _MirrorScale );
@@ -153,7 +155,7 @@
 			col = (1.-rough)*col;
 
 			//c = 1.0;
-            o.Albedo = c.rgb*(_DiffuseUse);
+            o.Albedo = (c.rgb-_DiffuseShift)*(_DiffuseUse);
             o.Metallic = tex2D (_Metallicity, IN.uv_MainTex) * _MetallicMux + _MetallicShift;
             o.Smoothness = tex2D (_Roughness, IN.uv_MainTex) * _SmoothnessMux + _SmoothnessShift;
 			o.Emission = max(col,0) + c.rgb * _Ambient;
