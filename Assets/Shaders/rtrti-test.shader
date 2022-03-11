@@ -19,6 +19,9 @@
 			// make fog work
 			#pragma multi_compile_fog
 
+
+			#define DEBUG_TRACE
+			
 			#include "UnityCG.cginc"
 			#include "trace.cginc"
 
