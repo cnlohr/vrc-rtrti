@@ -131,12 +131,13 @@
 				float3 worldRefl = reflect(-worldViewDir, worldNormal);
 				
 
-				float z;
-				float2 uvo;
-				float4 col = CoreTrace( i.worldPos, worldRefl, z, uvo ) * _MediaBrightness;
-				if( uvo.x > 1.0 ) col = 0.0;
+				float4 col = 1;
+				float3 hitnorm;
+				float4 uvozi = CoreTrace( i.worldPos, worldRefl, hitnorm ) * _MediaBrightness;
+				if( uvozi.x > 1.0 ) col = 0.0;
 
 				float3 debug = 0.0;
+#if 0
 				// Test if we need to reverse-cast through a mirror.
 				if( _Flip > 0.5 )
 				{
@@ -168,14 +169,12 @@
 						}
 					}
 				}
-					
-				if( z > 1e10 )
-					col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal )*.5;
+#endif
 
-
-				if( z > 1e10 )
+				if( uvozi.z > 1e10 )
 					col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal )*.5;
 				
+
 				float rough = 1.0-tex2D(_Roughness, i.uv)*_RoughnessIntensity;
 				rough *= _RoughAdj;
 				col = (1.-rough)*col + tex2D(_MainTex, i.uv)*_DiffuseUse*rough;

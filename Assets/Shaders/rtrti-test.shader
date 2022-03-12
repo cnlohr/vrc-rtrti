@@ -2,7 +2,6 @@
 {
 	Properties
 	{
-		_EmissionTex ("Texture", 2D) = "white" {}
 		_GeoTex ("Geometry", 2D) = "black" {}
 	}
 	SubShader
@@ -54,10 +53,19 @@
 			{
 				float3 dir = normalize( inval.worldView );
 				float3 eye = _WorldSpaceCameraPos.xyz;
-				
-				float z;
-				float2 uvo;
-				float4 col = CoreTrace( eye, dir, z, uvo );
+
+				float3 hitnorm = 0;
+				float4 uvozi = CoreTrace( eye, dir, hitnorm );
+				float4 col = 0;
+				if( uvozi.x < 0 )
+				{
+					col.r = (uvozi.a%1000)/255;
+					col.g = (uvozi.a/1000)/255;
+				}
+				else
+				{
+					col.rgb = hitnorm;
+				}
 				
 				UNITY_APPLY_FOG(i.fogCoord, col);
 				return float4( col.xyz, 1.0 );

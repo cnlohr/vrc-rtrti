@@ -23,6 +23,10 @@ Material:
         m_Texture: {fileID: 2800000, guid: bd81db38763932e4693184799d5f2191, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _CombinedRelfectionTextures:
+        m_Texture: {fileID: 8600000, guid: 9eedaf9e5fdbfdb4997a79ce4b3d29c6, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -88,13 +92,14 @@ Material:
     - _MetallicMux: 1
     - _MetallicShift: 0
     - _Mode: 0
-    - _NormalizeValue: 0
+    - _NormalizeValue: -0.44
+    - _NumberOfCombinedTextures: 8
     - _OcclusionStrength: 1
     - _OverrideReflection: 0
     - _Parallax: 0.02
     - _RoughAdj: 0.2
-    - _RoughnessIntensity: -33.86
-    - _RoughnessShift: 0.8
+    - _RoughnessIntensity: -32.34
+    - _RoughnessShift: 1.9
     - _SkyboxBrightness: 1
     - _SmoothnessMux: 1
     - _SmoothnessShift: 0
@@ -102,6 +107,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
+    - _UseLightmapInsteadOfProxyVolume: 0
     - _ZWrite: 1
     m_Colors:
     - _Ambient: {r: 0.02, g: 0.02, b: 0.02, a: 1}

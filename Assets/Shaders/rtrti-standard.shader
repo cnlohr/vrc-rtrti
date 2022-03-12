@@ -6,6 +6,8 @@
 		_MainTex("Main Texture", 2D) = "white" {}
 		_Roughness("Roughness", 2D) = "white" {}
 		_Metallicity("Metallicity", 2D) = "white" {}
+		_CombinedRelfectionTextures("Combined Reflection Textures", 2D) = "white" {}
+		_NumberOfCombinedTextures( "Number of Combined Textures", float ) = 6.0
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_GeoTex ("Geometry", 2D) = "black" {}
 		_DiffuseUse( "Diffuse Use", float ) = .1
@@ -41,7 +43,10 @@
 		
 		#include "/Assets/cnlohr/Shaders/hashwithoutsine/hashwithoutsine.cginc"
 
+		sampler2D _EmissionTex;
 		sampler2D _BumpMap, _MainTex, _Roughness, _Metallicity;
+		sampler2D _CombinedRelfectionTextures;
+		float _NumberOfCombinedTextures;
 		float _DiffuseUse, _DiffuseShift, _MediaBrightness;
 		float _RoughnessIntensity, _RoughnessShift;
 		float _NormalizeValue;
@@ -58,7 +63,7 @@
 		float _MetallicShift;
 		float _SmoothnessMux;
 		float _SmoothnessShift;
-
+		
 		#include "trace.cginc"
 
         struct Input
@@ -110,11 +115,10 @@
 			float3 worldRefl = reflect(-worldViewDir, worldNormal);
 			float4 col = 0.;
 
-			float z;
-			float2 uvo = 0.0;
 			float epsilon = 0.00;
-			col = CoreTrace( IN.worldPos+worldRefl*epsilon, worldRefl, z, uvo ) * _MediaBrightness;
-			if( uvo.x > 1.0 ) col = 0.0;
+			float3 worldEye = IN.worldPos+worldRefl*epsilon;
+			float3 hitnorm = 0;
+			float3 uvoz = CoreTrace( worldEye, worldRefl, hitnorm );
 
 			float3 debug = 0.0;
 			// Test if we need to reverse-cast through a mirror.
@@ -139,20 +143,40 @@
 					//revpos.x = -(revpos.x - mirror_pos) + mirror_pos;
 					revpos = mirror_pos+reflect( revpos - mirror_pos, mirror_n );
 
-					float z2;
-					uvo = 0.0;
-					float4 c2 = CoreTrace( revpos+revray*epsilon, revray, z2, uvo ) * _MediaBrightness;
-					if( uvo.x > 1.0 ) c2 = 0.0;
-					if( z2 < z )
+					float3 hitnorm2 = 0;
+					float3 uvoz2 = CoreTrace( revpos+revray*epsilon, revray, hitnorm2 );
+					if( uvoz2.z < uvoz.z )
 					{
-						col = c2;
-						z = z2;
+						worldEye = revpos+revray*epsilon;
+						worldRefl = revray;
+						uvoz = uvoz2;
+						hitnorm = hitnorm2;
 					}
 				}
 			}
 				
-			if( z > 1e10 )
+			if( uvoz.z > 1e10 )
 				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldRefl )*_SkyboxBrightness;
+			else
+			{
+				if( uvoz.x < 1 )
+				{
+					col = tex2Dlod( _EmissionTex, float4( uvoz.xy, 0.0, 0.0 ) ) * _MediaBrightness;
+				}
+				else
+				{
+					float3 hitworld = uvoz.z * worldRefl + worldEye;
+					float3 combtex = tex2Dlod( _CombinedRelfectionTextures, float4( uvoz.xy/float2(_NumberOfCombinedTextures, 0.0), 0, 0 ) );
+#if UNITY_LIGHT_PROBE_PROXY_VOLUME
+						//col.rgb = SHEvalLinearL0L1_SampleProbeVolume(float4( normalize(hitnorm), 1.0 ), hitworld) * 1;
+						col.rgb = ShadeSHPerPixel ( hitnorm, 0., hitworld) * combtex;
+#else
+						// No mechanism to get brightness.
+						col.rgb = combtex;
+#endif
+			
+				}
+			}
 			
 			if( length( debug )> 0.0 ) col.rgb = debug;			
 			
@@ -171,6 +195,7 @@
             o.Albedo = (c.rgb-_DiffuseShift)*(_DiffuseUse);
             o.Metallic = tex2D (_Metallicity, IN.uv_MainTex) * _MetallicMux + _MetallicShift;
             o.Smoothness = tex2D (_Roughness, IN.uv_MainTex) * _SmoothnessMux + _SmoothnessShift;
+			
 			o.Emission = max(col,0) + c.rgb * _Ambient;
             o.Alpha = c.a;
         }
