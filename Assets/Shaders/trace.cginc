@@ -119,8 +119,7 @@ float4 CoreTrace( float3 eye, float3 dir, out float z, out float2 uvo )
 		}
 	}
 
-	return float4( -ptr/250.0, 0, 1 );
-
+	z = minz;
 	return col;
 }
 
