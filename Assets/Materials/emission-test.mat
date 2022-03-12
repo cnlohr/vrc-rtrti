@@ -44,7 +44,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GIEmissionTex:
-        m_Texture: {fileID: 8600000, guid: 4aec4c2eb3e944b498137fb806dc9064, type: 2}
+        m_Texture: {fileID: 2800000, guid: 2d94d52a04e3163469722875cf7d0fab, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -74,7 +74,7 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _IsAVProInput: 0
-    - _MainIntensity: 1.1
+    - _MainIntensity: 1.2
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1

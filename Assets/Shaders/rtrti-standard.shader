@@ -31,7 +31,6 @@
     SubShader
     {
         Tags { "RenderType"="Opaque" }
-        LOD 200
 
         CGPROGRAM
         // Physically based Standard lighting model, and enable shadows on all light types
@@ -40,6 +39,7 @@
         // Use shader model 3.0 target, to get nicer looking lighting
         #pragma target 5.0
 		
+		#include "/Assets/cnlohr/Shaders/hashwithoutsine/hashwithoutsine.cginc"
 
 		sampler2D _BumpMap, _MainTex, _Roughness, _Metallicity;
 		float _DiffuseUse, _DiffuseShift, _MediaBrightness;
@@ -67,6 +67,7 @@
 			float3 worldPos;
 			float3 worldNormal;
 			float3 worldRefl;
+			float4 screenPos;
 			INTERNAL_DATA
         };
 
@@ -94,8 +95,14 @@
         {
             // Albedo comes from a texture tinted by color
             fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _AlbedoBoost;
-			o.Normal = UnpackNormal (tex2D (_BumpMap, IN.uv_MainTex));
+			
+			//float2 hash = chash23( float3( _Time.y * 100, IN.uv_MainTex * 1000 ) )-0.5;
+			//float2 hash2 = chash23( float3( _Time.y * 100, IN.uv_MainTex * 1000 )+10. )-0.5;
+			//float2 ruvx = ddx( IN.uv_MainTex ) * hash.x + ddy( IN.uv_MainTex ) * hash.y;
+			float2 ruvx = 0;
+			o.Normal = UnpackNormal (tex2D (_BumpMap, IN.uv_MainTex + ruvx));
 			o.Normal.z+=_NormalizeValue;
+			//o.Normal.xy += hash2*.01;
 			o.Normal = normalize(o.Normal);
 			float3 worldNormal = WorldNormalVector (IN, o.Normal);
 
@@ -153,6 +160,12 @@
 			rough *= _RoughAdj;
 			rough = saturate( rough );
 			col = (1.-rough)*col;
+			
+			
+			//float2 coords = IN.screenPos.xy / IN.screenPos.w*_ScreenParams.xy;
+			//coords.y++;
+			//float2 sgn = lerp(1,-1,coords.xy%2);
+			//col = (col + sgn.y*ddx_fine( col )*.3 + sgn.y*ddy_fine( col )*.3);
 
 			//c = 1.0;
             o.Albedo = (c.rgb-_DiffuseShift)*(_DiffuseUse);
@@ -162,6 +175,41 @@
             o.Alpha = c.a;
         }
         ENDCG
+
+
+		// shadow caster rendering pass, implemented manually
+		// using macros from UnityCG.cginc
+		Pass
+		{
+			Tags {"LightMode"="ShadowCaster"}
+			Cull Off
+			CGPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag
+			#pragma multi_compile_shadowcaster
+			#pragma multi_compile_instancing
+			#include "UnityCG.cginc"
+
+			struct v2f { 
+				V2F_SHADOW_CASTER;
+				float4 uv : TEXCOORD0;
+			};
+
+			v2f vert(appdata_base v)
+			{
+				v2f o;
+				UNITY_SETUP_INSTANCE_ID(v);
+				TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
+				o.uv = v.texcoord;
+				return o;
+			}
+
+			float4 frag(v2f i) : SV_Target
+			{
+				SHADOW_CASTER_FRAGMENT(i)
+			}
+			ENDCG
+		}
     }
     FallBack "Diffuse"
 }
