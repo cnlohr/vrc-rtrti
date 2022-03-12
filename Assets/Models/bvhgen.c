@@ -145,7 +145,7 @@ struct BVHPair
 	struct BVHPair * a;
 	struct BVHPair * b;
 	struct BVHPair * parent;
-	float centerextents[8];
+	float minxmaxh[8];
 	int triangle_number; /// If -1 is a inner node.
 	int x, y; // Start
 	int w, h; // Size (right now 2 for bv, 8 for triangle)
@@ -239,20 +239,20 @@ float GetTreeMaxr( struct BVHPair * pairs, const float * tridata, const float * 
 	return maxr;
 }
 
-void GetCenterExtentsForTree( struct BVHPair * pairs, float * tridata, float * centerextents )
+void GetMinXMaxHForTree( struct BVHPair * pairs, float * tridata, float * minxmaxh )
 {
-	float mins[3] = { 1e20, 1e20, 1e20 };
-	float maxs[3] = {-1e20,-1e20,-1e20 };
-	GetTreeExtents( pairs, tridata, mins, maxs );
-	centerextents[0] = (maxs[0]+mins[0])/2;
-	centerextents[1] = (maxs[1]+mins[1])/2;
-	centerextents[2] = (maxs[2]+mins[2])/2;
-	centerextents[4] = (maxs[0]-mins[0]);
-	centerextents[5] = (maxs[1]-mins[1]);
-	centerextents[6] = (maxs[2]-mins[2]);
+	minxmaxh[0] = 1e20;
+	minxmaxh[1] = 1e20;
+	minxmaxh[2] = 1e20;
+	minxmaxh[4] =-1e20;
+	minxmaxh[5] =-1e20;
+	minxmaxh[6] =-1e20;
+
+	GetTreeExtents( pairs, tridata, minxmaxh, minxmaxh+4 );
+
 	int ahi = pairs->a?pairs->a->height:0;
 	int bhi = pairs->b?pairs->b->height:0;
-	centerextents[7] = centerextents[4] + centerextents[5] + centerextents[6] + (ahi+bhi)*.01; // Heuristic
+	minxmaxh[7] = (minxmaxh[4] - minxmaxh[0]) + (minxmaxh[5] - minxmaxh[1]) + (minxmaxh[6] - minxmaxh[2]) + (ahi+bhi)*.01;
 }
 
 
@@ -266,12 +266,13 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 	{
 		pairs[i].triangle_number = i;
 		pairs[i].height = 0;
-		GetCenterExtentsForTree( pairs + i, tridata, pairs[i].centerextents );
-		printf( "%d  %f %f %f  %f %f %f\n", i, pairs[i].centerextents[0], pairs[i].centerextents[1], pairs[i].centerextents[2], pairs[i].centerextents[4], pairs[i].centerextents[5], pairs[i].centerextents[6]  );
+		GetMinXMaxHForTree( pairs + i, tridata, pairs[i].minxmaxh );
+		printf( "%d  %f %f %f  %f %f %f  %f\n", i, pairs[i].minxmaxh[0], pairs[i].minxmaxh[1], pairs[i].minxmaxh[2], pairs[i].minxmaxh[4], pairs[i].minxmaxh[5], pairs[i].minxmaxh[6], pairs[i].minxmaxh[7]  );
 	}
 
 	printf( "------------------------------------------\n");
 	nrpairs = i;
+	
 
 	// Now, pairs from 0..tricount are leaf (Triangle) nodes on up.
 	// Building a BVH this way isn't perfectly optimal but for a binary BVH, it's really good.
@@ -281,29 +282,31 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 		any_left = 0;
 		int besti = -1, bestj = -1;
 		float smallestq = 1e20;
-		int i, j;
+		int i, j, objct = 0;;
 		for( j = 0; j < nrpairs; j++ )
 		{
 			struct BVHPair * jp = pairs+j;
 			if( jp->parent ) continue; // Already inside a tree.
-			//if( jp->centerextents[7] > smallestq*2 ) continue;  //Explore this:  Sometimes this caused issues???
+			objct++;
+			if( jp->minxmaxh[7] > smallestq ) continue;  //Don't check objects that are plain too big.
 			for( i = j+1; i < nrpairs; i++ )
 			{
 				if( i == j ) continue;
 				struct BVHPair * ip = pairs+i;
 				if( ip->parent ) continue; // Already inside a tree.
+				if( ip->minxmaxh[7] > smallestq ) continue;  //Don't check objects that are plain too big.
 				any_left = 1;
 				
 				// Compute BB from these two objects, and find heuristic size.
 				float newmax[3] = {
-					( ip->centerextents[0] > jp->centerextents[0] ) ? ip->centerextents[0] : jp->centerextents[0],
-					( ip->centerextents[1] > jp->centerextents[1] ) ? ip->centerextents[1] : jp->centerextents[1], 
-					( ip->centerextents[2] > jp->centerextents[2] ) ? ip->centerextents[2] : jp->centerextents[2] };
+					( ip->minxmaxh[4] > jp->minxmaxh[4] ) ? ip->minxmaxh[4] : jp->minxmaxh[4],
+					( ip->minxmaxh[5] > jp->minxmaxh[5] ) ? ip->minxmaxh[5] : jp->minxmaxh[5], 
+					( ip->minxmaxh[6] > jp->minxmaxh[6] ) ? ip->minxmaxh[6] : jp->minxmaxh[6] };
 				float newmin[3] = {
-					( ip->centerextents[0] < jp->centerextents[0] ) ? ip->centerextents[0] : jp->centerextents[0],
-					( ip->centerextents[1] < jp->centerextents[1] ) ? ip->centerextents[1] : jp->centerextents[1],
-					( ip->centerextents[2] < jp->centerextents[2] ) ? ip->centerextents[2] : jp->centerextents[2] };
-				float q = ( newmax[0] - newmin[0] ) + (newmax[1] - newmin[1]) + (newmax[2] - newmin[2]) + (jp->height+ip->height)*.01;
+					( ip->minxmaxh[0] < jp->minxmaxh[0] ) ? ip->minxmaxh[0] : jp->minxmaxh[0],
+					( ip->minxmaxh[1] < jp->minxmaxh[1] ) ? ip->minxmaxh[1] : jp->minxmaxh[1],
+					( ip->minxmaxh[2] < jp->minxmaxh[2] ) ? ip->minxmaxh[2] : jp->minxmaxh[2] };
+				float q = ( newmax[0] - newmin[0] ) + (newmax[1] - newmin[1]) + (newmax[2] - newmin[2]) + (ip->height+jp->height)*.01;
 
 				if( q < smallestq )
 				{
@@ -313,6 +316,9 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 				}
 			}
 		}
+		//[%f %f %f] [%f %f %f]
+		//if( smallestq < pairs[bestj].minxmaxh[7] ) { fprintf( stderr, "ERROR FAULT: %f %f \n", smallestq, pairs[bestj].minxmaxh[7] ); }//, newmax[0], newmax[1], newmax[2], newmin[0], newmin[1], newmin[2] ); }
+
 		if (!any_left) break;
 		if ( besti < 0 || bestj < 0 )
 		{
@@ -330,8 +336,8 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 		parent->triangle_number = -1;
 		parent->height = ((jp->height>ip->height)?jp->height:ip->height)+1;
 		// Greedily find new optimal sphere.
-		GetCenterExtentsForTree( parent, tridata, parent->centerextents );
-		printf( "%d  %f %f %f  %f %f %f\n", i, pairs[i].centerextents[0], pairs[i].centerextents[1], pairs[i].centerextents[2], pairs[i].centerextents[4], pairs[i].centerextents[5], pairs[i].centerextents[6]  );
+		GetMinXMaxHForTree( parent, tridata, parent->minxmaxh );
+		printf( "%d/%d  %f %f %f  %f %f %f  %f\n", i, objct, pairs[i].minxmaxh[0], pairs[i].minxmaxh[1], pairs[i].minxmaxh[2], pairs[i].minxmaxh[4], pairs[i].minxmaxh[5], pairs[i].minxmaxh[6], pairs[i].minxmaxh[7]  );
 
 /*
 		// Tricky - joining two spheres. 
@@ -498,15 +504,15 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	}
 	else
 	{
-		hitmiss[0] = tt->a->x/256.0;
-		hitmiss[1] = tt->a->y/256.0;
+		hitmiss[0] = tt->a->x;
+		hitmiss[1] = tt->a->y;
 	}
 
 	struct BVHPair * next = FindFallBVH( tt );
 	if( next )
 	{
-		hitmiss[2] = next->x/256.0;
-		hitmiss[3] = next->y/256.0;
+		hitmiss[2] = next->x;
+		hitmiss[3] = next->y;
 	}
 	else
 	{
@@ -517,19 +523,7 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	//memcpy( asset2d[y][x], tt->centerextents, sizeof( float ) * 8 );
 	//asset2d[y][x][3] = asset2d[y][x][3] * asset2d[y][x][3];// Tricky: We do r^2 because that makes the math work out better in the shader.
 
-	float MinMaxEdges[8];
-	MinMaxEdges[0] = (tt->centerextents[0] - tt->centerextents[4] / 2.0);
-	MinMaxEdges[1] = (tt->centerextents[1] - tt->centerextents[5] / 2.0);
-	MinMaxEdges[2] = (tt->centerextents[2] - tt->centerextents[6] / 2.0);
-	MinMaxEdges[3] = 0; // This is free.
-	MinMaxEdges[4] = (tt->centerextents[0] + tt->centerextents[4] / 2.0);
-	MinMaxEdges[5] = (tt->centerextents[1] + tt->centerextents[5] / 2.0);
-	MinMaxEdges[6] = (tt->centerextents[2] + tt->centerextents[6] / 2.0);
-	MinMaxEdges[7] = sqrt(
-		tt->centerextents[4] * tt->centerextents[4] + 
-		tt->centerextents[5] * tt->centerextents[5] + 
-		tt->centerextents[6] * tt->centerextents[6] );
-	TWriteCopy( asset2d[y+0][x+0], MinMaxEdges, sizeof( float ) * 8 );
+	TWriteCopy( asset2d[y+0][x+0], tt->minxmaxh, sizeof( float ) * 8 );
 
 
 	if( tt->triangle_number >= 0 )

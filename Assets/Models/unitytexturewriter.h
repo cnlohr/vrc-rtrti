@@ -51,20 +51,22 @@ int main()
 
 #include <stdint.h>
 
+// See https://github.com/Unity-Technologies/UnityCsReference/blob/master/Runtime/Export/Graphics/GraphicsEnums.cs
+
 #define UTE_UNSPPORTED             0
 #define UTE_ALPHA8                 1
-#define UTE_ARGB                   2
+#define UTE_ARGB                   2  // Or BGRA4 UNORM (16 bpp)
 #define UTE_RGB24                  3
 #define UTE_RGBA32                 4
 #define UTE_ARGB32                 5
 #define UTE_ARGB_FLOAT             6
-#define UTE_RGB16                  7
+#define UTE_RGB16                  7 // R5G6B5
 #define UTE_BGR24                  8
 #define UTE_R16                    9
 #define UTE_RGBDXT1                10
 #define UTE_RGBADXT3               11
 #define UTE_RGBADXT5               12
-#define UTE_RGBA16                 13
+#define UTE_RGBA16                 13 // Really RGBA4444
 #define UTE_BGRA32                 14
 #define UTE_R_HALF                 15
 #define UTE_RG_HALF                16
@@ -79,6 +81,46 @@ int main()
 #define UTE_RGBA_BC7               25
 #define UTE_R_BC4                  26
 #define UTE_RG_BC5                 27
+#define UTE_DXT1_UNORM             28
+#define UTE_DXT5_UNORM             29
+#define UTE_RGB_PVRTC_2BPP_UNORM   30
+#define UTE_RGBA_PVRTC_2BPP_UNORM  31
+#define UTE_RGB_PVRTC_4BPP_UNORM   32
+#define UTE_RGBA_PVRTC_4BPP_UNORM  33
+#define UTE_RGB_ETC_UNORM          34
+#define UTE_R_EAC_UNORM            41
+#define UTE_R_EAC_SNORM            42
+#define UTE_RG_EAC_UNORM           43
+#define UTE_RG_EAC_SNORM           44
+#define UTE_RGB_ETC2_UNORM         45
+#define UTE_RGBA_ETC2_PUNCHTHROUGH_UNORM        46
+#define UTE_RGBA_ETC2_UNORM        47
+#define UTE_RGBA_ATSC4X4_UNORM     48
+#define UTE_RGBA_ATSC5x5_UNORM     49
+#define UTE_RGBA_ATSC6x6_UNORM     50
+#define UTE_RGBA_ATSC8x8_UNORM     51
+#define UTE_RGBA_ATSC10x10_UNORM   52
+#define UTE_RGBA_ATSC12x12_UNORM   53
+#define UTE_RGBA_ATSC4x4B_UNORM    54
+#define UTE_RGBA_ATSC5x5B_UNORM    55
+#define UTE_RGBA_ATSC6x6B_UNORM    56
+#define UTE_RGBA_ATSC8x8B_UNORM    57
+#define UTE_RGBA_ATSC10x10B_UNORM  58
+#define UTE_RGBA_ATSC12x12B_UNORM  59
+#define UTE_RGB_ETCB_UNORM         60
+#define UTE_RGBA_ETC2B_UNORM       61
+#define UTE_RG8_UNORM              62
+#define UTE_R8_UNORM               63
+#define UTE_RGB_ETC_B_UNORM        64
+
+
+// Note: For these formats, your object size must be correct.  These are raw 16-bit formats.
+#define UTE_RG32_UNORM             72
+#define UTE_RGB48_UNORM            73
+#define UTE_RGBA64_UNORM           74
+
+
+
 
 #define UTE_FLAG_FORMAT_MASK             0xff
 
