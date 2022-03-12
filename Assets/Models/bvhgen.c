@@ -467,6 +467,14 @@ struct BVHPair * FindFallBVH( struct BVHPair * tt )
 }
 
 
+void TWriteCopy( float * wr, float * rd, int bytes )
+{
+	int i;
+	for( i = 0; i < bytes / sizeof(float); i++ )
+	{
+		wr[i] = rd[i];
+	}
+}
 
 int WriteInBVH( struct BVHPair * tt, float * triangles )
 {
@@ -490,15 +498,15 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	}
 	else
 	{
-		hitmiss[0] = tt->a->x / (float)TEXW;
-		hitmiss[1] = tt->a->y / (float)TEXH;
+		hitmiss[0] = tt->a->x/256.0;
+		hitmiss[1] = tt->a->y/256.0;
 	}
 
 	struct BVHPair * next = FindFallBVH( tt );
 	if( next )
 	{
-		hitmiss[2] = next->x / (float)TEXW;
-		hitmiss[3] = next->y / (float)TEXH;
+		hitmiss[2] = next->x/256.0;
+		hitmiss[3] = next->y/256.0;
 	}
 	else
 	{
@@ -509,17 +517,20 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	//memcpy( asset2d[y][x], tt->centerextents, sizeof( float ) * 8 );
 	//asset2d[y][x][3] = asset2d[y][x][3] * asset2d[y][x][3];// Tricky: We do r^2 because that makes the math work out better in the shader.
 
-	asset2d[y][x][0] = tt->centerextents[0] - tt->centerextents[4] / 2.0;
-	asset2d[y][x][1] = tt->centerextents[1] - tt->centerextents[5] / 2.0;
-	asset2d[y][x][2] = tt->centerextents[2] - tt->centerextents[6] / 2.0;
-	asset2d[y][x][3] = 0; // This is free.
-	asset2d[y][x][4] = tt->centerextents[0] + tt->centerextents[4] / 2.0;
-	asset2d[y][x][5] = tt->centerextents[1] + tt->centerextents[5] / 2.0;
-	asset2d[y][x][6] = tt->centerextents[2] + tt->centerextents[6] / 2.0;
-	asset2d[y][x][7] = sqrt(
+	float MinMaxEdges[8];
+	MinMaxEdges[0] = (tt->centerextents[0] - tt->centerextents[4] / 2.0);
+	MinMaxEdges[1] = (tt->centerextents[1] - tt->centerextents[5] / 2.0);
+	MinMaxEdges[2] = (tt->centerextents[2] - tt->centerextents[6] / 2.0);
+	MinMaxEdges[3] = 0; // This is free.
+	MinMaxEdges[4] = (tt->centerextents[0] + tt->centerextents[4] / 2.0);
+	MinMaxEdges[5] = (tt->centerextents[1] + tt->centerextents[5] / 2.0);
+	MinMaxEdges[6] = (tt->centerextents[2] + tt->centerextents[6] / 2.0);
+	MinMaxEdges[7] = sqrt(
 		tt->centerextents[4] * tt->centerextents[4] + 
 		tt->centerextents[5] * tt->centerextents[5] + 
 		tt->centerextents[6] * tt->centerextents[6] );
+	TWriteCopy( asset2d[y+0][x+0], MinMaxEdges, sizeof( float ) * 8 );
+
 
 	if( tt->triangle_number >= 0 )
 	{
@@ -533,12 +544,13 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 		this_tri[16] -= this_tri[0];
 		this_tri[17] -= this_tri[1];
 		this_tri[18] -= this_tri[2];
-		memcpy( asset2d[y+0][x+2], this_tri+0, sizeof( float ) * 4 );
-		memcpy( asset2d[y+1][x+2], this_tri+4, sizeof( float ) * 4 );
-		memcpy( asset2d[y+0][x+3], this_tri+8, sizeof( float ) * 4 );
-		memcpy( asset2d[y+1][x+3], this_tri+12, sizeof( float ) * 4 );
-		memcpy( asset2d[y+0][x+4], this_tri+16, sizeof( float ) * 4 );
-		memcpy( asset2d[y+1][x+4], this_tri+20, sizeof( float ) * 4 );
+
+		TWriteCopy( asset2d[y+0][x+2], this_tri+0, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+1][x+2], this_tri+4, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+0][x+3], this_tri+8, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+1][x+3], this_tri+12, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+0][x+4], this_tri+16, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+1][x+4], this_tri+20, sizeof( float ) * 4 );
 
 		// Compute the normal to the surface of this triangle.
 		float dA[3] = { this_tri[8], this_tri[9], this_tri[10] };
@@ -546,7 +558,7 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 		float norm[3];
 		cross3d( norm, dA, dB );
 		mul3d( norm, 1.0/mag3d( norm ) );
-		memcpy( asset2d[y+1][x+1], norm, sizeof(float)*3 );
+		TWriteCopy( asset2d[y+1][x+1], norm, sizeof(float)*3 );
 		
 	}
 
