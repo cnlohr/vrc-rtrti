@@ -122,6 +122,8 @@
 
 			float3 debug = 0.0;
 			// Test if we need to reverse-cast through a mirror.
+/*
+			
 			if( _Flip > 0.5 ) {
 			//if( 0 ) {
 			//if( 1 ){
@@ -154,7 +156,8 @@
 					}
 				}
 			}
-				
+*/
+
 			if( uvoz.z > 1e10 )
 				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldRefl )*_SkyboxBrightness;
 			else

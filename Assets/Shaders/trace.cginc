@@ -25,13 +25,16 @@ float4 CoreTrace( float3 eye, float3 dir, out float3 hitnorm )
 	float2 uvo = -1;
 	float3 invd = 1.0 / dir;
 	int tricheck = 0;
-	
+
 	while( i++ < 255 && ptr.x >= 0 )
 	{
 		mincorner = tex2Dlod( _GeoTex, float4( ptr, 0, 0) );
 		maxcorner = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x, 0 ), 0, 0) );
 		truefalse = tex2Dlod( _GeoTex, float4( ptr + float2( 0, _GeoTex_TexelSize.y ), 0, 0 ) )/float4(512.0,256.0,512.0,256.0);
-		
+	
+		// minmaxcorner:  [ x y z ] [ radius ]
+		// minmaxcorner:  [ x y z ] [ 1 if triangle, 0 otherwise ]
+	
 		// Effectively "slabs" function from: https://jcgt.org/published/0007/03/04/paper-lowres.pdf
 		float3 minrel = mincorner - eye;
 		float3 maxrel = maxcorner - eye;
@@ -40,7 +43,7 @@ float4 CoreTrace( float3 eye, float3 dir, out float3 hitnorm )
 		float3 tmin = min(t0,t1), tmax = max(t0,t1);
 
 		// This can be as simple as dividing the axis-value in dir by the distance to the object.
-		float r = maxcorner.a/2;
+		float r = mincorner.a;
 		float3 center = (minrel + maxrel)/2;
 		float dr = dot( center, dir );
 		
@@ -54,7 +57,7 @@ float4 CoreTrace( float3 eye, float3 dir, out float3 hitnorm )
 		if( hit )
 		{
 			// Intersection
-			if( truefalse.x < 0 )
+			if( maxcorner.a > 0 )
 			{
 				// Do triangle intersection. If not, set to no intersection.
 				float3 N =  tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 1, _GeoTex_TexelSize.y ), 0.0, 0.0 ) );
@@ -79,23 +82,16 @@ float4 CoreTrace( float3 eye, float3 dir, out float3 hitnorm )
 #ifdef DEBUG_TRACE
 				tricheck++;
 #endif
-				if( all( tbary.xyzw >= 0 ) && tbary.x < minz && dot( N, dir ) > 0 )
+				// Note: Normally, to not hit backfaces, we do dot( N, dir ) > 0, but
+				// Experimentally, dot( Q, dir ) < 0 seems to confusingly work perfectly.
+				if( all( tbary.xyzw >= 0 ) && tbary.x < minz && dot( Q, dir ) < 0 )
 				{
 					minz = tbary.x;
 					ptrhit = ptr;
 				}
-				
-				ptr = truefalse.zw;
-			}
-			else
-			{
-				ptr = truefalse.xy;
 			}
 		}
-		else
-		{
-			ptr = truefalse.zw;
-		}
+		ptr = hit?truefalse.xy:truefalse.zw;
 	}
 
 	// TODO: split out into function.
@@ -139,6 +135,8 @@ float4 CoreTrace( float3 eye, float3 dir, out float3 hitnorm )
 
 	return float4( uvo, minz, i + tricheck * 1000 );
 }
+
+
 
 /* Archive
 
