@@ -519,9 +519,27 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 		hitmiss[2] = -1;
 		hitmiss[3] = -1;
 	}
+	
+	if( hitmiss[0] == -1 )
+	{
+		hitmiss[0] = hitmiss[2];
+		hitmiss[1] = hitmiss[3];
+		tt->minxmaxh[7] = 1;
+	}
+	else
+	{
+		tt->minxmaxh[7] = 0;
+	}
 
 	//memcpy( asset2d[y][x], tt->centerextents, sizeof( float ) * 8 );
 	//asset2d[y][x][3] = asset2d[y][x][3] * asset2d[y][x][3];// Tricky: We do r^2 because that makes the math work out better in the shader.
+
+	// Calculate radius
+	
+	float dx = (tt->minxmaxh[4] - tt->minxmaxh[0])/2;
+	float dy = (tt->minxmaxh[5] - tt->minxmaxh[1])/2;
+	float dz = (tt->minxmaxh[6] - tt->minxmaxh[2])/2;
+	tt->minxmaxh[3] = sqrt( dx*dx + dy*dy + dz*dz );
 
 	TWriteCopy( asset2d[y+0][x+0], tt->minxmaxh, sizeof( float ) * 8 );
 
@@ -553,7 +571,6 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 		cross3d( norm, dA, dB );
 		mul3d( norm, 1.0/mag3d( norm ) );
 		TWriteCopy( asset2d[y+1][x+1], norm, sizeof(float)*3 );
-		
 	}
 
 	return 0;
