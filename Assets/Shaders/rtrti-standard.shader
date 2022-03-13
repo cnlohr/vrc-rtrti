@@ -117,12 +117,10 @@
 
 			float epsilon = 0.00;
 			float3 worldEye = IN.worldPos+worldRefl*epsilon;
-			float3 hitnorm = 0;
-			float3 uvoz = CoreTrace( worldEye, worldRefl, hitnorm );
+			float4 hitz = CoreTrace( worldEye, worldRefl );
 
 			float3 debug = 0.0;
 			// Test if we need to reverse-cast through a mirror.
-/*
 			
 			if( _Flip > 0.5 ) {
 			//if( 0 ) {
@@ -145,37 +143,38 @@
 					//revpos.x = -(revpos.x - mirror_pos) + mirror_pos;
 					revpos = mirror_pos+reflect( revpos - mirror_pos, mirror_n );
 
-					float3 hitnorm2 = 0;
-					float3 uvoz2 = CoreTrace( revpos+revray*epsilon, revray, hitnorm2 );
-					if( uvoz2.z < uvoz.z )
+					float4 uvoz2 = CoreTrace( revpos+revray*epsilon, revray );
+					if( uvoz2.z < hitz.z )
 					{
 						worldEye = revpos+revray*epsilon;
 						worldRefl = revray;
-						uvoz = uvoz2;
-						hitnorm = hitnorm2;
+						hitz = uvoz2;
 					}
 				}
 			}
-*/
 
-			if( uvoz.z > 1e10 )
+
+			if( hitz.z > 1e10 )
 				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldRefl )*_SkyboxBrightness;
 			else
 			{
+				float2 uvoz = 0;
+				float3 hitnorm = 0;
+				float rz = GetTriDataFromPtr( worldEye, worldRefl, hitz, uvoz, hitnorm );
+
 				if( uvoz.x < 1 )
 				{
 					col = tex2Dlod( _EmissionTex, float4( uvoz.xy, 0.0, 0.0 ) ) * _MediaBrightness;
 				}
 				else
 				{
-					float3 hitworld = uvoz.z * worldRefl + worldEye;
-					float3 combtex = tex2Dlod( _CombinedRelfectionTextures, float4( uvoz.xy/float2(_NumberOfCombinedTextures, 0.0), 0, 0 ) );
+					float3 hitworld = hitz.z * worldRefl + worldEye;
+					float3 combtex = tex2Dlod( _CombinedRelfectionTextures, float4( uvoz.xy/float2(_NumberOfCombinedTextures, 1.0), 0, 0 ) );
 #if UNITY_LIGHT_PROBE_PROXY_VOLUME
-						//col.rgb = SHEvalLinearL0L1_SampleProbeVolume(float4( normalize(hitnorm), 1.0 ), hitworld) * 1;
-						col.rgb = ShadeSHPerPixel ( hitnorm, 0., hitworld) * combtex;
+					col.rgb = ShadeSHPerPixel ( hitnorm, 0., hitworld) * combtex * .8; //.8 is arbitrary, but slightly darker.
 #else
-						// No mechanism to get brightness.
-						col.rgb = combtex;
+					// No mechanism to get brightness.
+					col.rgb = combtex;
 #endif
 			
 				}

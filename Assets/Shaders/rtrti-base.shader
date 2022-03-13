@@ -133,7 +133,7 @@
 
 				float4 col = 1;
 				float3 hitnorm;
-				float4 uvozi = CoreTrace( i.worldPos, worldRefl, hitnorm ) * _MediaBrightness;
+				float4 uvozi = CoreTrace( i.worldPos, worldRefl );
 				if( uvozi.x > 1.0 ) col = 0.0;
 
 				float3 debug = 0.0;

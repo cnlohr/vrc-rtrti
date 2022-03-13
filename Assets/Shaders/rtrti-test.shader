@@ -54,16 +54,18 @@
 				float3 dir = normalize( inval.worldView );
 				float3 eye = _WorldSpaceCameraPos.xyz;
 
+				float4 ptrzct = CoreTrace( eye, dir );
 				float3 hitnorm = 0;
-				float4 uvozi = CoreTrace( eye, dir, hitnorm );
 				float4 col = 0;
-				if( uvozi.x < 0 )
+				float2 uvo;
+				if( ptrzct.x < 0 )
 				{
-					col.r = (uvozi.a%1000)/255;
-					col.g = (uvozi.a/1000)/255;
+					col.r = (ptrzct.a%1000)/255;
+					col.g = (ptrzct.a/1000)/255;
 				}
 				else
 				{
+					GetTriDataFromPtr( eye, dir, ptrzct.xy, uvo, hitnorm );
 					col.rgb = hitnorm;
 				}
 				
