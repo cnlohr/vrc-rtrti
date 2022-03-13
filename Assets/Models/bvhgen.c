@@ -252,6 +252,11 @@ void GetMinXMaxHForTree( struct BVHPair * pairs, float * tridata, float * minxma
 
 	int ahi = pairs->a?pairs->a->height:0;
 	int bhi = pairs->b?pairs->b->height:0;
+	
+	// Not sure why - the math breaks down if any one axis is 0.
+	if( (minxmaxh[4] - minxmaxh[0]) < 0.0001 ) minxmaxh[0] -= 0.0001;
+	if( (minxmaxh[5] - minxmaxh[1]) < 0.0001 ) minxmaxh[1] -= 0.0001;
+	if( (minxmaxh[6] - minxmaxh[2]) < 0.0001 ) minxmaxh[2] -= 0.0001;
 	minxmaxh[7] = (minxmaxh[4] - minxmaxh[0]) + (minxmaxh[5] - minxmaxh[1]) + (minxmaxh[6] - minxmaxh[2]) + (ahi+bhi)*.01;
 }
 
@@ -576,6 +581,13 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	return 0;
 }
 
+int CountTrianglesInTree( struct BVHPair * tt )
+{
+	struct BVHPair * a = tt->a;
+	struct BVHPair * b = tt->b;
+	return (tt->triangle_number>=0) + (a?CountTrianglesInTree(a):0) + (b?CountTrianglesInTree(b):0);
+}
+
 int main( )
 {
 	float * tridata = 0;
@@ -598,6 +610,6 @@ int main( )
 	WriteUnityImageAsset( "geometryimage.asset", asset2d, sizeof(asset2d), TEXW, TEXH, 0, UTE_RGBA_FLOAT );
 
 	printf( "Usage: %d / %d (%3.2f%%)\n", totalallocations, TEXW*TEXH, ((float)totalallocations)/(TEXW*TEXH)*100. );
-	printf( "Triangles: %d\n", trianglecount );
+	printf( "Triangles: %d\n", CountTrianglesInTree( root ) );
 	printf( "BVH Count: %d\n", bvhcount );
 }
