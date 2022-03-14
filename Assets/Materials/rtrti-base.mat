@@ -98,7 +98,7 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _MirrorPlace: {r: -12.94, g: 0.95, b: -0, a: 0}
-    - _MirrorRotation: {r: -0, g: -0.7071068, b: -0, a: 0.7071068}
-    - _MirrorScale: {r: 9, g: 3, b: 1, a: 0}
+    - _MirrorPlace: {r: 9.92, g: 0.53, b: 4.953, a: 0}
+    - _MirrorRotation: {r: 0, g: 0, b: 0, a: 1}
+    - _MirrorScale: {r: 6, g: 3, b: 1, a: 0}
     - _UVScale: {r: 2, g: 2, b: 0, a: 0}

@@ -4,6 +4,9 @@
     {
 		_EmissionTex ("Emission Texture", 2D) = "white" {}
 		_MainTex("Main Texture", 2D) = "white" {}
+		_NoiseTex( "Noise Texture", 2D) = "white" {}
+		[HDR] _MainTexColor("Main Tex Color", Color) = ( 1, 1, 1, 1 )
+		[HDR] _MainTexColorBoost("Main Tex Add", Color) = ( 0, 0, 0, 0)
 		_Roughness("Roughness", 2D) = "white" {}
 		_Metallicity("Metallicity", 2D) = "white" {}
 		_CombinedRelfectionTextures("Combined Reflection Textures", 2D) = "white" {}
@@ -32,20 +35,34 @@
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque+1" }
+
+        GrabPass { "_GrabTexture" }
 
         CGPROGRAM
         // Physically based Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Standard
+        #pragma surface surf Standard nometa
 
         // Use shader model 3.0 target, to get nicer looking lighting
         #pragma target 5.0
 		
 		#include "/Assets/cnlohr/Shaders/hashwithoutsine/hashwithoutsine.cginc"
+#ifndef SHADER_TARGET_SURFACE_ANALYSIS
+		#include "/Assets/Shaders/ErrorSSR/SSR.cginc"
+#else
+		
+#endif
 
 		sampler2D _EmissionTex;
 		sampler2D _BumpMap, _MainTex, _Roughness, _Metallicity;
 		sampler2D _CombinedRelfectionTextures;
+		sampler2D _GrabTexture;
+#ifndef SHADER_TARGET_SURFACE_ANALYSIS
+		Texture2D _NoiseTex; //For SSR
+#endif
+		
+		float4 _GrabTexture_TexelSize;
+		float4 _NoiseTex_TexelSize;
 		float _NumberOfCombinedTextures;
 		float _DiffuseUse, _DiffuseShift, _MediaBrightness;
 		float _RoughnessIntensity, _RoughnessShift;
@@ -56,6 +73,8 @@
 		float3 _MirrorPlace;
 		float3 _MirrorScale;
 		float4 _MirrorRotation;
+		float4 _MainTexColor;
+		float4 _MainTexColorBoost;
 		float _OverrideReflection;
 		float _SkyboxBrightness;
 		float _AlbedoBoost;
@@ -99,7 +118,7 @@
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
             // Albedo comes from a texture tinted by color
-            fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _AlbedoBoost;
+            fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _AlbedoBoost * _MainTexColor + _MainTexColorBoost;
 			
 			//float2 hash = chash23( float3( _Time.y * 100, IN.uv_MainTex * 1000 ) )-0.5;
 			//float2 hash2 = chash23( float3( _Time.y * 100, IN.uv_MainTex * 1000 )+10. )-0.5;
@@ -118,10 +137,10 @@
 			float epsilon = 0.00;
 			float3 worldEye = IN.worldPos+worldRefl*epsilon;
 			float4 hitz = CoreTrace( worldEye, worldRefl );
-
+			
 			float3 debug = 0.0;
 			// Test if we need to reverse-cast through a mirror.
-			
+#if 0
 			if( _Flip > 0.5 ) {
 			//if( 0 ) {
 			//if( 1 ){
@@ -152,14 +171,14 @@
 					}
 				}
 			}
-
+#endif
+			float3 hitnorm = 0;
 
 			if( hitz.z > 1e10 )
 				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldRefl )*_SkyboxBrightness;
 			else
 			{
 				float2 uvoz = 0;
-				float3 hitnorm = 0;
 				float rz = GetTriDataFromPtr( worldEye, worldRefl, hitz, uvoz, hitnorm );
 
 				if( uvoz.x < 1 )
@@ -180,6 +199,29 @@
 				}
 			}
 			
+			
+			#ifndef SHADER_TARGET_SURFACE_ANALYSIS
+				float4 ssr = getSSRColor( float4( worldEye, 1.0 ), worldViewDir, float4( worldRefl, 0. ), worldNormal,
+					// large/small radius
+					.5, .02,
+					.1, // stepSize
+					3, // Blur
+					100, // Max steps
+					0, // isLowres
+					1, // Smoothness
+					0.1, // Edge fade
+					_GrabTexture_TexelSize.zw,
+					PASS_SCREENSPACE_TEXTURE( _GrabTexture ),
+					_NoiseTex,
+					_NoiseTex_TexelSize.zw,
+					1.0, // albedo
+					1.0, // metallic
+					0.0, // rtint
+					1, // mask
+					1, hitz.z ); // Alpha
+				col = lerp( col.rgba, ssr.rgba, ssr.a );
+			#endif
+
 			if( length( debug )> 0.0 ) col.rgb = debug;			
 			
 			float rough = 1.0-tex2D(_Roughness, IN.uv_MainTex)*_RoughnessIntensity + _RoughnessShift;
@@ -202,7 +244,6 @@
             o.Alpha = c.a;
         }
         ENDCG
-
 
 		// shadow caster rendering pass, implemented manually
 		// using macros from UnityCG.cginc
