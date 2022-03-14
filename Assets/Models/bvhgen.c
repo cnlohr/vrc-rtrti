@@ -7,9 +7,43 @@
 #include "unitytexturewriter.h"
 #include <math.h>
 
-// TODO:
-//  1) Fix bounding binding something's wrong with the bounding spheres.
-//  2) Improve performance of pair finding.
+
+#define TEXW 256
+#define TEXH 2048
+float asset2d[TEXH][TEXW][4];
+int lineallocations[TEXH];
+int totalallocations;
+int trianglecount;
+int bvhcount;
+
+// Assume double-line allocation
+int Allocate( int pixels, int * x, int * y )
+{
+	pixels = (pixels+1)/2; // Alternate top/bottom
+	int i;
+	for( i = 1; i < TEXH/2; i++ )
+	{
+		if( TEXW - lineallocations[i] > pixels )
+		{
+			*x = lineallocations[i];
+			*y = i*2;
+			lineallocations[i] += pixels;
+			totalallocations += pixels;
+			return 0;
+		}
+	}
+	fprintf( stderr, "No room left in geometry map\n" );
+	return -1;
+}
+
+void TWriteCopy( float * wr, float * rd, int bytes )
+{
+	int i;
+	for( i = 0; i < bytes / sizeof(float); i++ )
+	{
+		wr[i] = rd[i];
+	}
+}
 
 int OpenOBJ( const char * name, float ** tridata, int * tricount )
 {
@@ -149,6 +183,8 @@ struct BVHPair
 	int triangle_number; /// If -1 is a inner node.
 	int x, y; // Start
 	int w, h; // Size (right now 2 for bv, 8 for triangle)
+	
+	int trix, triy;
 	int height;
 };
 
@@ -273,6 +309,31 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 		pairs[i].height = 0;
 		GetMinXMaxHForTree( pairs + i, tridata, pairs[i].minxmaxh );
 		printf( "%d  %f %f %f  %f %f %f  %f\n", i, pairs[i].minxmaxh[0], pairs[i].minxmaxh[1], pairs[i].minxmaxh[2], pairs[i].minxmaxh[4], pairs[i].minxmaxh[5], pairs[i].minxmaxh[6], pairs[i].minxmaxh[7]  );
+
+		
+		// Just FYI for this hitmiss[0] / 1 will be negative
+		float * this_tri = tridata + pairs[i].triangle_number * 24;
+		float tt[24];
+		memcpy( tt, this_tri, sizeof( tt ) );
+		int x, y;
+		Allocate( 8, &x, &y );
+		pairs[i].trix = x;
+		pairs[i].triy = y;
+		
+		// Make v1, v2 of tri be relative to v0.
+		tt[8]  -= tt[0];
+		tt[9]  -= tt[1];
+		tt[10] -= tt[2];
+		tt[16] -= tt[0];
+		tt[17] -= tt[1];
+		tt[18] -= tt[2];
+
+		TWriteCopy( asset2d[y+0][x+0], tt+0, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+1][x+0], tt+4, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+0][x+1], tt+8, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+1][x+1], tt+12, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+0][x+2], tt+16, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+1][x+2], tt+20, sizeof( float ) * 4 );
 	}
 
 	printf( "------------------------------------------\n");
@@ -417,38 +478,11 @@ struct BVHPair * BuildBVH( struct BVHPair * pairs, float * tridata, int tricount
 	return pairs + nrpairs - 1;
 }
 
-#define TEXW 512
-#define TEXH 256
-float asset2d[TEXH][TEXW][4];
-int lineallocations[TEXH];
-int totalallocations;
-int trianglecount;
-int bvhcount;
-
-// Assume double-line allocation
-int Allocate( int pixels, int * x, int * y )
-{
-	pixels = (pixels+1)/2; // Alternate top/bottom
-	int i;
-	for( i = 0; i < TEXH/2; i++ )
-	{
-		if( TEXW - lineallocations[i] > pixels )
-		{
-			*x = lineallocations[i];
-			*y = i*2;
-			lineallocations[i] += pixels;
-			totalallocations += pixels;
-			return 0;
-		}
-	}
-	fprintf( stderr, "No room left in geometry map\n" );
-	return -1;
-}
 
 int AllocateBVH( struct BVHPair * tt )
 {
 	tt->h = 2;
-	tt->w = (tt->triangle_number<0)?4:10;
+	tt->w = (tt->triangle_number<0)?4:6;
 
 	if( Allocate( tt->w, &tt->x, &tt->y ) < 0 )
 		return -1;
@@ -478,14 +512,6 @@ struct BVHPair * FindFallBVH( struct BVHPair * tt )
 }
 
 
-void TWriteCopy( float * wr, float * rd, int bytes )
-{
-	int i;
-	for( i = 0; i < bytes / sizeof(float); i++ )
-	{
-		wr[i] = rd[i];
-	}
-}
 
 int WriteInBVH( struct BVHPair * tt, float * triangles )
 {
@@ -500,7 +526,7 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	int y = tt->y;
 	
 	int j;
-	float * hitmiss = asset2d[y+1][x];
+	float * hitmiss = asset2d[y+1][x+0];
 	if( !tt->a )
 	{
 		//XXXX TOOD If we have a "HIT" on a leaf node, what does that mean?
@@ -553,6 +579,21 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 	{
 		// Just FYI for this hitmiss[0] / 1 will be negative
 		float * this_tri = triangles + tt->triangle_number * 24;
+		float ttcopy[24];
+		memcpy( ttcopy, this_tri, sizeof(float)*24 );
+		
+		ttcopy[3] = tt->trix;
+		ttcopy[8] -= this_tri[0];
+		ttcopy[9] -= this_tri[1];
+		ttcopy[10] -= this_tri[2];
+		ttcopy[11] = tt->triy;
+		ttcopy[16] -= this_tri[0];
+		ttcopy[17] -= this_tri[1];
+		ttcopy[18] -= this_tri[2];
+		TWriteCopy( asset2d[y+1][x+1], ttcopy+0, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+0][x+2], ttcopy+8, sizeof( float ) * 4 );
+		TWriteCopy( asset2d[y+1][x+2], ttcopy+16, sizeof( float ) * 4 );
+/*
 		
 		// Make v1, v2 of tri be relative to v0.
 		this_tri[8] -= this_tri[0];
@@ -568,14 +609,15 @@ int WriteInBVH( struct BVHPair * tt, float * triangles )
 		TWriteCopy( asset2d[y+1][x+3], this_tri+12, sizeof( float ) * 4 );
 		TWriteCopy( asset2d[y+0][x+4], this_tri+16, sizeof( float ) * 4 );
 		TWriteCopy( asset2d[y+1][x+4], this_tri+20, sizeof( float ) * 4 );
+*/
 
 		// Compute the normal to the surface of this triangle.
-		float dA[3] = { this_tri[8], this_tri[9], this_tri[10] };
-		float dB[3] = { this_tri[16], this_tri[17], this_tri[18] };
-		float norm[3];
-		cross3d( norm, dA, dB );
-		mul3d( norm, 1.0/mag3d( norm ) );
-		TWriteCopy( asset2d[y+1][x+1], norm, sizeof(float)*3 );
+	//	float dA[3] = { this_tri[8], this_tri[9], this_tri[10] };
+	//	float dB[3] = { this_tri[16], this_tri[17], this_tri[18] };
+	//	float norm[3];
+	//	cross3d( norm, dA, dB );
+	//	mul3d( norm, 1.0/mag3d( norm ) );
+	//	TWriteCopy( asset2d[y+1][x+1], norm, sizeof(float)*3 );
 	}
 
 	return 0;
@@ -587,6 +629,45 @@ int CountTrianglesInTree( struct BVHPair * tt )
 	struct BVHPair * b = tt->b;
 	return (tt->triangle_number>=0) + (a?CountTrianglesInTree(a):0) + (b?CountTrianglesInTree(b):0);
 }
+
+void ReorganizeTreeOrder( struct BVHPair * tt, int dir )
+{
+	if( tt->a ) ReorganizeTreeOrder( tt->a, dir );
+	if( tt->b ) ReorganizeTreeOrder( tt->b, dir );
+	
+	if( tt->a && tt->b )
+	{
+		int axis = dir / 2;
+		float cna = (tt->a->minxmaxh[axis]+tt->a->minxmaxh[axis+3])/2;
+		float cnb = (tt->b->minxmaxh[axis]+tt->b->minxmaxh[axis+3])/2;		
+		if( dir & 1 )
+		{
+			if( cna > cnb )
+			{
+				struct BVHPair * temp = tt->a;
+				tt->a = tt->b;
+				tt->b = temp;
+			}
+			else
+			{
+			}
+		}
+		else
+		{
+			if( cna > cnb )
+			{
+			}
+			else
+			{
+				struct BVHPair * temp = tt->a;
+				tt->a = tt->b;
+				tt->b = temp;
+			}
+		}
+		
+	}
+}
+
 
 int main( )
 {
@@ -602,11 +683,19 @@ int main( )
 	struct BVHPair * allpairs = calloc( sizeof( struct BVHPair ), tricount*2+3 );
 	struct BVHPair * root = BuildBVH( allpairs, tridata, tricount );
 
-	if( AllocateBVH( root ) < 0 )
-		return -1;	
+	int axis;
+	for( axis = 0; axis < 6; axis++ )
+	{
+		ReorganizeTreeOrder( root, axis );
 
-	WriteInBVH( root, tridata );
+		if( AllocateBVH( root ) < 0 )
+			return -1;	
 
+		WriteInBVH( root, tridata );
+		
+		asset2d[0][axis][0] = root->x;
+		asset2d[0][axis][1] = root->y;
+	}
 	WriteUnityImageAsset( "geometryimage.asset", asset2d, sizeof(asset2d), TEXW, TEXH, 0, UTE_RGBA_FLOAT );
 
 	printf( "Usage: %d / %d (%3.2f%%)\n", totalallocations, TEXW*TEXH, ((float)totalallocations)/(TEXW*TEXH)*100. );

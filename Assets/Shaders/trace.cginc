@@ -26,15 +26,27 @@ float4 CoreTrace( float3 eye, float3 dir )
 	float3 invd = 1.0 / dir;
 	int tricheck = 0;
 
+	{
+		// Pick the most optimal stepping order.
+
+		float3 dira = abs( dir );
+		int axisno = (dira.x>dira.y)? ( (dira.x > dira.z)?0:2 ) : ( (dira.y > dira.z)?1:2 );
+		int dire = dir[axisno]>0;
+		ptr = tex2Dlod( _GeoTex, float4( (axisno * 2 + dire)*_GeoTex_TexelSize.x, 0, 0, 0) )*_GeoTex_TexelSize.xyxy;
+	}
+	
 	[loop]
-	while( i++ < 255 && ptr.x >= 0 )
+	while( i++ < 255 && ptr.y > 0 )
 	{
 		mincorner = tex2Dlod( _GeoTex, float4( ptr, 0, 0) );
-		maxcorner = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x, 0 ), 0, 0) );
-		truefalse = tex2Dlod( _GeoTex, float4( ptr + float2( 0, _GeoTex_TexelSize.y ), 0, 0 ) )/float4(512.0,256.0,512.0,256.0);
+		maxcorner = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x*1, _GeoTex_TexelSize.y*0 ), 0, 0) );
+		truefalse = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x*0, _GeoTex_TexelSize.y*1 ), 0, 0 ) )*_GeoTex_TexelSize.xyxy;
 	
 		// minmaxcorner:  [ x y z ] [ radius ]
 		// minmaxcorner:  [ x y z ] [ 1 if triangle, 0 otherwise ]
+	
+	
+		//XXX XXX OPTIMIZATION OPPORTUNITY:  We can know which ones are min/max rel.
 	
 		// Effectively "slabs" function from: https://jcgt.org/published/0007/03/04/paper-lowres.pdf
 		float3 minrel = mincorner - eye;
@@ -58,9 +70,9 @@ float4 CoreTrace( float3 eye, float3 dir )
 		{
 			// Do triangle intersection. If not, set to no intersection.
 			//float3 N =  tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 1, _GeoTex_TexelSize.y ), 0.0, 0.0 ) );
-			float4 v0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, 0.0 ), 0.0, 0.0 ) );
-			float4 v1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 3, 0.0 ), 0.0, 0.0 ) );
-			float4 v2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 4, 0.0 ), 0.0, 0.0 ) );
+			float4 v0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 1, _GeoTex_TexelSize.y*1 ), 0.0, 0.0 ) );
+			float4 v1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, _GeoTex_TexelSize.y*0 ), 0.0, 0.0 ) );
+			float4 v2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, _GeoTex_TexelSize.y*1 ), 0.0, 0.0 ) );
 			
 			// Compute t and barycentric coordinates using Moller-Trumbore
 			// https://tr.inf.unibe.ch/pdf/iam-04-004.pdf
@@ -84,7 +96,7 @@ float4 CoreTrace( float3 eye, float3 dir )
 			if( all( tbary.xyzw >= 0 ) && tbary.x < minz && dot( Q, dir ) < 0 )
 			{
 				minz = tbary.x;
-				ptrhit = ptr;
+				ptrhit = float2( v0.a, v1.a )*_GeoTex_TexelSize.xy;
 			}
 		}
 		ptr = hit?truefalse.xy:truefalse.zw;
@@ -97,13 +109,12 @@ float4 CoreTrace( float3 eye, float3 dir )
 float GetTriDataFromPtr( float3 eye, float3 dir, float2 ptr, out float2 uvo, out float3 hitnorm )
 {
 	// Do triangle intersection. If not, set to no intersection.
-	float3 N =  tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 1, _GeoTex_TexelSize.y ), 0.0, 0.0 ) );
-	float4 v0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, 0.0 ), 0.0, 0.0 ) );
-	float4 v1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 3, 0.0 ), 0.0, 0.0 ) );
-	float4 v2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 4, 0.0 ), 0.0, 0.0 ) );
-	float4 n0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, _GeoTex_TexelSize.y ), 0.0, 0.0 ) );
-	float4 n1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 3, _GeoTex_TexelSize.y ), 0.0, 0.0 ) );
-	float4 n2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 4, _GeoTex_TexelSize.y ), 0.0, 0.0 ) );
+	float4 v0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 0, _GeoTex_TexelSize.y*0 ), 0.0, 0.0 ) );
+	float4 v1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 1, _GeoTex_TexelSize.y*0 ), 0.0, 0.0 ) );
+	float4 v2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, _GeoTex_TexelSize.y*0 ), 0.0, 0.0 ) );
+	float4 n0 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 0, _GeoTex_TexelSize.y*1 ), 0.0, 0.0 ) );
+	float4 n1 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 1, _GeoTex_TexelSize.y*1 ), 0.0, 0.0 ) );
+	float4 n2 = tex2Dlod( _GeoTex, float4( ptr + float2( _GeoTex_TexelSize.x * 2, _GeoTex_TexelSize.y*1 ), 0.0, 0.0 ) );
 
 	// Compute t and barycentric coordinates using Moller-Trumbore
 	// https://tr.inf.unibe.ch/pdf/iam-04-004.pdf

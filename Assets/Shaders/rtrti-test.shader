@@ -58,15 +58,13 @@
 				float3 hitnorm = 0;
 				float4 col = 0;
 				float2 uvo;
-				if( ptrzct.x < 0 )
-				{
-					col.r = (ptrzct.a%1000)/255;
-					col.g = (ptrzct.a/1000)/255;
-				}
-				else
+
+				col.r = (ptrzct.a%1000)/255;
+				col.g = (ptrzct.a/1000)/255;
+				if( ptrzct.x >= 0 )
 				{
 					GetTriDataFromPtr( eye, dir, ptrzct.xy, uvo, hitnorm );
-					col.rgb = hitnorm;
+					col.rgb += hitnorm*.1;
 				}
 				
 				UNITY_APPLY_FOG(i.fogCoord, col);
