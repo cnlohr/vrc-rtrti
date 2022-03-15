@@ -84,11 +84,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Tex7:
-        m_Texture: {fileID: 2800000, guid: 57676d3bae85b2c43afbc90c71d78c45, type: 3}
+        m_Texture: {fileID: 2800000, guid: 87624ec23a497e842890921991fba5f4, type: 3}
         m_Scale: {x: 5, y: 5}
         m_Offset: {x: 0, y: 0}
     - _Tex8:
-        m_Texture: {fileID: 2800000, guid: 87624ec23a497e842890921991fba5f4, type: 3}
+        m_Texture: {fileID: 2800000, guid: 57676d3bae85b2c43afbc90c71d78c45, type: 3}
         m_Scale: {x: 10, y: 10}
         m_Offset: {x: 0, y: 0}
     - _Tex9:
