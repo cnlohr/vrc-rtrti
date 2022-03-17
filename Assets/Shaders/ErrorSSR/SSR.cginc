@@ -440,13 +440,13 @@ float4 getSSRColor(
 		 * along with the number of iterations it took stored as the w component.
 		 */
 		
-		float4 finalPos = reflect_ray(reflectedRay, rayDir, largeRadius, smallRadius, stepSize, noise, maxSteps);
-		if( length( wPos - finalPos ) > dontreflectoverz )
+		float4 finalPos = reflect_ray(reflectedRay, normalize(rayDir), largeRadius, smallRadius, stepSize, noise, maxSteps);
+		//return ( length( finalPos.xyz ) - 10 ).rrrr;
+		if( length( finalPos.xyz ) > dontreflectoverz-.4 )
 		{
 			return 0;
 		}
-		
-		
+
 		// get the total number of iterations out of finalPos's w component and replace with 1.
 		float totalSteps = finalPos.w;
 		finalPos.w = 1;

@@ -35,8 +35,9 @@
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque+1" }
+        //Tags { "RenderType"="Opaque+1" }
 
+        Tags { "Queue" = "Opaque+1" }
         GrabPass { "_GrabTexture" }
 
         CGPROGRAM
@@ -173,7 +174,8 @@
 			}
 #endif
 			float3 hitnorm = 0;
-
+			float3 hitworld = 1e10;
+			
 			if( hitz.z > 1e10 )
 				col = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldRefl )*_SkyboxBrightness;
 			else
@@ -187,7 +189,7 @@
 				}
 				else
 				{
-					float3 hitworld = hitz.z * worldRefl + worldEye;
+					hitworld = hitz.z * worldRefl + worldEye;
 					float3 combtex = tex2Dlod( _CombinedRelfectionTextures, float4( uvoz.xy/float2(_NumberOfCombinedTextures, 1.0), 0, 0 ) );
 #if UNITY_LIGHT_PROBE_PROXY_VOLUME
 					col.rgb = ShadeSHPerPixel ( hitnorm, 0., hitworld) * combtex * .8; //.8 is arbitrary, but slightly darker.
@@ -199,8 +201,8 @@
 				}
 			}
 			
-			
 			#ifndef SHADER_TARGET_SURFACE_ANALYSIS
+				float matchz = length( _WorldSpaceCameraPos.xyz - hitworld );
 				float4 ssr = getSSRColor( float4( worldEye, 1.0 ), worldViewDir, float4( worldRefl, 0. ), worldNormal,
 					// large/small radius
 					.5, .02,
@@ -218,10 +220,10 @@
 					1.0, // metallic
 					0.0, // rtint
 					1, // mask
-					1, hitz.z ); // Alpha
+					1, matchz ); // Alpha
 				col = lerp( col.rgba, ssr.rgba, ssr.a );
+				//col = saturate(ssr.z);
 			#endif
-
 			if( length( debug )> 0.0 ) col.rgb = debug;			
 			
 			float rough = 1.0-tex2D(_Roughness, IN.uv_MainTex)*_RoughnessIntensity + _RoughnessShift;
