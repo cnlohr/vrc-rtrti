@@ -695,6 +695,7 @@ int main( )
 		
 		asset2d[0][axis][0] = root->x;
 		asset2d[0][axis][1] = root->y;
+		printf( "WRITING %d %d\n", root->x, root->y );
 	}
 	WriteUnityImageAsset( "geometryimage.asset", asset2d, sizeof(asset2d), TEXW, TEXH, 0, UTE_RGBA_FLOAT );
 

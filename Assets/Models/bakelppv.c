@@ -1,3 +1,6 @@
+//
+// tcc bakelppv.c -lOpenGL32 -lkernel32 -luser32 -lgdi32
+//
 #include <stdio.h>
 #include <math.h>
 #include "unitytexturewriter.h"
@@ -79,10 +82,10 @@ int main()
 						{
 							break;
 						}
-						if( a >= 'a' ) a = a - 'a' + '0';
-						if( a >= 'A' ) a = a - 'A' + '0';
-						if( b >= 'a' ) b = b - 'a' + '0';
-						if( b >= 'A' ) b = b - 'A' + '0';
+						if( a >= 'a' ) a = a - 'a' + '0' + 10;
+						if( a >= 'A' ) a = a - 'A' + '0' + 10;
+						if( b >= 'a' ) b = b - 'a' + '0' + 10;
+						if( b >= 'A' ) b = b - 'A' + '0' + 10;
 						a -= '0'; b -= '0';
 						((uint8_t*)texdata)[i] = (a<<4)|b;
 					}
@@ -174,8 +177,8 @@ int main()
 			
 			glBindTexture(GL_TEXTURE_2D, geotex );
 
-			int ww = 500;
-			int wh = 500;
+			int ww = 1024;
+			int wh = 512;
 			const float verts[] = {
 				0,0, ww,0, ww,wh,
 				0,0, ww,wh, 0,wh, };

@@ -50,7 +50,7 @@ vec4 CoreTrace( vec3 eye, vec3 dir )
 		vec3 dira = abs( dir );
 		int axisno = (dira.x>dira.y)? ( (dira.x > dira.z)?0:2 ) : ( (dira.y > dira.z)?1:2 );
 		int dire = (dir[axisno]>0)?1:0;
-		ptr = tex2Dlod( _GeoTex, vec4( (axisno * 2 + dire)*_GeoTex_TexelSize.x, 0, 0, 0) ).xy*_GeoTex_TexelSize.xy;
+		ptr = tex2Dlod( _GeoTex, vec4( float(axisno * 2 + dire)*_GeoTex_TexelSize.x, 0, 0, 0) ).xy*_GeoTex_TexelSize.xy;
 	}
 
 	while( i++ < 255 && ptr.y > 0 )
@@ -60,8 +60,7 @@ vec4 CoreTrace( vec3 eye, vec3 dir )
 		truefalse = tex2Dlod( _GeoTex, vec4( ptr + vec2( _GeoTex_TexelSize.x*0, _GeoTex_TexelSize.y*1 ), 0, 0 ) )*_GeoTex_TexelSize.xyxy;
 		// minmaxcorner:  [ x y z ] [ radius ]
 		// minmaxcorner:  [ x y z ] [ 1 if triangle, 0 otherwise ]
-
-		return vec4(truefalse.xyx*500.0, 1.0);
+		//return vec4(truefalse.xyx*500.0, 1.0);
 
 		//XXX XXX OPTIMIZATION OPPORTUNITY:  We can know which ones are min/max rel.
 	
@@ -81,6 +80,7 @@ vec4 CoreTrace( vec3 eye, vec3 dir )
 			vec3( max_component(tmin), 0, dr-r )
 			,
 			vec3( min_component(tmax), dr+r, minz ) ) );
+			
 
 		// Does intersect, AND is it in front of us, and behind the closest hit object?
 		if( hit && maxcorner.a > 0)
@@ -118,7 +118,6 @@ vec4 CoreTrace( vec3 eye, vec3 dir )
 		}
 		ptr = hit?truefalse.xy:truefalse.zw;
 	}
-	return vec4( i/40., 0, 0, 1);
 	return vec4( ptrhit, minz,  i + tricheck * 1000 );
 }
 
@@ -161,13 +160,43 @@ float GetTriDataFromPtr( vec3 eye, vec3 dir, vec2 ptr, out vec2 uvo, out vec3 hi
 
 void main()
 {
-	vec3 eye = vec3( 0, 0, 20. );
-	vec3 dir = normalize(vec3( tc.x-0.5, tc.y-0.5, 0.4 ));
+	vec3 eye = vec3( -0, 1, 12);
+
+	// Lambertian Cylindrical Equal-Area Projection
+	// https://mathworld.wolfram.com/CylindricalEqual-AreaProjection.html
+	float phis = 0;
+	float lambda0 = 0;
+	float x = tc.x * 3.14159*2;
+	float y = tc.y * 3.14159+1.5705;
+	float phi = x;
+	float lam = sin(y);
+
+	vec3 dir = vec3(
+		sin( phi ) * cos( lam ),
+		sin( lam ),
+		cos( phi ) * cos( lam )
+		);
+	
 	vec4 ctdata = CoreTrace( eye, dir );
-	fragcolor = ctdata;
+	fragcolor = vec4( 0, 0,0 ,1 );
+	if( ctdata.x >= 0.0 )
+	{
+		vec2 uvo;
+		vec3 hitnorm;
+		float z = GetTriDataFromPtr( eye, dir, ctdata.xy, uvo, hitnorm );
+		fragcolor.xyz = vec3( uvo.xy, 1 );
+	}
+	else
+	{
+		fragcolor = vec4( 0. );
+	}
+	
+	//fragcolor.b = 1;
+	fragcolor.b = cos(phi);
+	//fragcolor.b = 3 * pow( cos(lam), 2 ) - 1;
 
 	//vec4 _GeoTex_TexelSize = vec4( 1.0/geowidth, 1.0/geoheight, geowidth, geoheight );
-	//fragcolor = vec4(tex2Dlod( _GeoTex, vec4( tc.xy*_GeoTex_TexelSize.xy*512/20, 0, 0 ) ).xyz, 1.0);
+	//fragcolor = vec4(tex2Dlod( _GeoTex, vec4( (tc.xy*512/20+vec2(240,1933))*_GeoTex_TexelSize.xy, 0, 0 ) ).rgb, 1.0);
 	//fragcolor = vec4( _GeoTex_TexelSize.xy*1024, 0, 1 );
 }
 
