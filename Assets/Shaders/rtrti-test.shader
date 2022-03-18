@@ -61,10 +61,10 @@
 
 				col.r = (ptrzct.a%1000)/255;
 				col.g = (ptrzct.a/1000)/255;
-				if( ptrzct.x >= 0 )
+				if( ptrzct.y >= 0 )
 				{
 					GetTriDataFromPtr( eye, dir, ptrzct.xy, uvo, hitnorm );
-					col.rgb += hitnorm*.1;
+					col.rgb += hitnorm*.2;
 				}
 				
 				UNITY_APPLY_FOG(i.fogCoord, col);

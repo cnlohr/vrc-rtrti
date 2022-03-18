@@ -37,7 +37,7 @@
     {
         //Tags { "RenderType"="Opaque+1" }
 
-        Tags { "Queue" = "Opaque+1" }
+        Tags { "Queue" = "Geometry" "RenderType"="Transparent"}
         GrabPass { "_GrabTexture" }
 
         CGPROGRAM
