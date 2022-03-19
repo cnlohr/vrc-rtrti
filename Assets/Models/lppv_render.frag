@@ -160,16 +160,16 @@ float GetTriDataFromPtr( vec3 eye, vec3 dir, vec2 ptr, out vec2 uvo, out vec3 hi
 
 void main()
 {
-	vec3 eye = vec3( -0, 1, 12);
+	vec3 eye = vec3( 0, 1, 0);
 
 	// Lambertian Cylindrical Equal-Area Projection
 	// https://mathworld.wolfram.com/CylindricalEqual-AreaProjection.html
 	float phis = 0;
 	float lambda0 = 0;
 	float x = tc.x * 3.14159*2;
-	float y = tc.y * 3.14159+1.5705;
+	float y = tc.y * 2 - 1;
 	float phi = x;
-	float lam = sin(y);
+	float lam = -asin(y);
 
 	vec3 dir = vec3(
 		sin( phi ) * cos( lam ),
@@ -184,15 +184,22 @@ void main()
 		vec2 uvo;
 		vec3 hitnorm;
 		float z = GetTriDataFromPtr( eye, dir, ctdata.xy, uvo, hitnorm );
-		fragcolor.xyz = vec3( uvo.xy, 1 );
+		if( uvo.x < 1 && uvo.y < 1 )
+		{
+			fragcolor.xyz = vec3( uvo.xy, 0 );
+		}
+		else
+		{
+			fragcolor.xyz = vec3( 0, 0, 1 );
+		}
 	}
 	else
 	{
 		fragcolor = vec4( 0. );
 	}
 	
+	
 	//fragcolor.b = 1;
-	fragcolor.b = cos(phi);
 	//fragcolor.b = 3 * pow( cos(lam), 2 ) - 1;
 
 	//vec4 _GeoTex_TexelSize = vec4( 1.0/geowidth, 1.0/geoheight, geowidth, geoheight );

@@ -1,6 +1,7 @@
 //
 // tcc bakelppv.c -lOpenGL32 -lkernel32 -luser32 -lgdi32
 //
+
 #include <stdio.h>
 #include <math.h>
 #include "unitytexturewriter.h"
@@ -12,14 +13,23 @@
 float sqrtf( float f ) { return sqrt( f ); }
 #include "rawdraw_sf.h"
 
+#include "os_generic.h"
+
 #ifndef GL_RGBA32F
 #define GL_RGBA32F   0x8814
 #endif
+
+#define RENDERW 512
+#define RENDERH 256
+
 
 void HandleKey( int keycode, int bDown ) { }
 void HandleButton( int x, int y, int button, int bDown ) { }
 void HandleMotion( int x, int y, int mask ) { }
 void HandleDestroy() { }
+
+uint32_t * process = 0;
+
 
 char * FileToString( const char * fname )
 {
@@ -49,10 +59,19 @@ int main()
 	int texhei = 0;
 	GLuint geotex;
 	glGenTextures( 1, &geotex );
+	
+	void (*SwapInterval)( int ) = CNFGGetProcAddress("wglSwapIntervalEXT");
+	if( SwapInterval ) SwapInterval( 0 );
 
+
+	double Now, LastSecond = OGGetAbsoluteTime();
+	int FrameCt = 0;
+	int FPSCt = 0;
+	int pingpong = 0;
 
 	while(1)
 	{
+		Now = OGGetAbsoluteTime();
 		CNFGBGColor = 0x000080ff; //Dark Blue Background
 
 		if( OGGetFileTime( "geometryimage.asset" ) != textime || texdata == 0 )
@@ -146,9 +165,8 @@ int main()
 		CNFGClearFrame();
 		CNFGHandleInput();
 		CNFGGetDimensions( &w, &h );
-
 		CNFGColor( 0xffffffff ); 
-		
+
 		if( rendershader > 0 && texdata )
 		{
 			int x = 0;
@@ -177,8 +195,8 @@ int main()
 			
 			glBindTexture(GL_TEXTURE_2D, geotex );
 
-			int ww = 1024;
-			int wh = 512;
+			int ww = RENDERW;
+			int wh = RENDERH;
 			const float verts[] = {
 				0,0, ww,0, ww,wh,
 				0,0, ww,wh, 0,wh, };
@@ -195,6 +213,34 @@ int main()
 		{
 			CNFGPenX = 1; CNFGPenY = 1;
 			CNFGDrawText( "Compile Error", 2 );
+		}
+		
+		uint32_t buffer[RENDERW*RENDERH*2];
+		pingpong = (pingpong + 1)%2;
+		uint32_t * tbuf = &buffer[RENDERW*RENDERH*pingpong];
+		// Tricky: glReadPixels operates from bottom-left
+		glReadPixels( 0, h-RENDERH, RENDERW, RENDERH, GL_RGBA, GL_UNSIGNED_BYTE, tbuf );
+		while( process != 0 ); // Wait before overwriting process.
+		process = tbuf;
+		
+		CNFGPenX = 1;
+		CNFGPenY = 256;
+		char st[128];
+		sprintf( st, "FPS: %d\n", FPSCt );
+		CNFGDrawText( st, 2 );
+		
+		FrameCt++;
+		if( Now - LastSecond >= 1 )
+		{
+			FPSCt = FrameCt;
+			FrameCt = 0;
+			LastSecond++;
+		}
+
+		GLenum gle = glGetError();
+		if( gle )
+		{
+			printf( "GL Error Code: %d / %08x\n", gle, gle );
 		}
 
 		CNFGSwapBuffers();		
