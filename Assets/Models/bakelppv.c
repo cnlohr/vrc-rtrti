@@ -22,13 +22,23 @@ float sqrtf( float f ) { return sqrt( f ); }
 #define RENDERW 512
 #define RENDERH 256
 
+int quit = 0;
 
 void HandleKey( int keycode, int bDown ) { }
 void HandleButton( int x, int y, int button, int bDown ) { }
 void HandleMotion( int x, int y, int mask ) { }
 void HandleDestroy() { }
 
-uint32_t * process = 0;
+uint32_t * frame_to_process = 0;
+
+void * ProcessThread( void * v )
+{
+	while( !quit )
+	{
+		frame_to_process = 0;
+	}
+}
+
 
 
 char * FileToString( const char * fname )
@@ -44,6 +54,8 @@ char * FileToString( const char * fname )
 	fclose( f );
 	return ret;
 }
+
+
 
 int main()
 {
@@ -68,8 +80,10 @@ int main()
 	int FrameCt = 0;
 	int FPSCt = 0;
 	int pingpong = 0;
+	
+	OGCreateThread( ProcessThread, 0 );
 
-	while(1)
+	while( !quit )
 	{
 		Now = OGGetAbsoluteTime();
 		CNFGBGColor = 0x000080ff; //Dark Blue Background
@@ -220,8 +234,8 @@ int main()
 		uint32_t * tbuf = &buffer[RENDERW*RENDERH*pingpong];
 		// Tricky: glReadPixels operates from bottom-left
 		glReadPixels( 0, h-RENDERH, RENDERW, RENDERH, GL_RGBA, GL_UNSIGNED_BYTE, tbuf );
-		while( process != 0 ); // Wait before overwriting process.
-		process = tbuf;
+		while( frame_to_process != 0 ); // Wait before overwriting process.
+		frame_to_process = tbuf;
 		
 		CNFGPenX = 1;
 		CNFGPenY = 256;
