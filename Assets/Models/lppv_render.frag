@@ -160,7 +160,7 @@ float GetTriDataFromPtr( vec3 eye, vec3 dir, vec2 ptr, out vec2 uvo, out vec3 hi
 
 void main()
 {
-	vec3 eye = vec3( 0, 1, 0);
+	vec3 eye = vec3(0,1,0);
 
 	// Lambertian Cylindrical Equal-Area Projection
 	// https://mathworld.wolfram.com/CylindricalEqual-AreaProjection.html
@@ -195,7 +195,7 @@ void main()
 	}
 	else
 	{
-		fragcolor = vec4( 0. );
+		fragcolor = vec4( 0, 0, 0.5, 0 );
 	}
 	
 	
