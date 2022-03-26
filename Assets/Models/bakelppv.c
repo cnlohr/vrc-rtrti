@@ -1,5 +1,5 @@
 //
-// tcc bakelppv.c -lOpenGL32 -lkernel32 -luser32 -lgdi32
+// tcc bakelppv.c -lOpenGL32 -lkernel32 -luser32 -lgdi32 -run
 //
 
 #include <stdio.h>
