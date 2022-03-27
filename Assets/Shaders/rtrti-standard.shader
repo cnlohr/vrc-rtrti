@@ -39,7 +39,7 @@
 
         Tags { "Queue" = "Geometry" "RenderType"="Transparent"}
         GrabPass { "_GrabTexture" }
-
+		
         CGPROGRAM
         // Physically based Standard lighting model, and enable shadows on all light types
         #pragma surface surf Standard nometa
@@ -243,7 +243,7 @@
             o.Smoothness = tex2D (_Roughness, IN.uv_MainTex) * _SmoothnessMux + _SmoothnessShift;
 			
 			o.Emission = max(col,0) + c.rgb * _Ambient;
-            o.Alpha = c.a;
+            o.Alpha = -1;
         }
         ENDCG
 
