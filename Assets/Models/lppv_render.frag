@@ -160,7 +160,7 @@ float GetTriDataFromPtr( vec3 eye, vec3 dir, vec2 ptr, out vec2 uvo, out vec3 hi
 
 void main()
 {
-	vec3 eye = vec3(0,1,0);
+	vec3 eye = vec3(-10,6.5,5);
 
 	// Lambertian Cylindrical Equal-Area Projection
 	// https://mathworld.wolfram.com/CylindricalEqual-AreaProjection.html
@@ -169,7 +169,7 @@ void main()
 	float x = tc.x * 3.14159*2;
 	float y = tc.y * 2 - 1;
 	float phi = x;
-	float lam = -asin(y);
+	float lam = -asin(y)*1.04; //XXX TODO: why is this few pixels needed?  Should we be noising it?
 
 	vec3 dir = vec3(
 		sin( phi ) * cos( lam ),

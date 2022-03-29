@@ -14,7 +14,7 @@ float sqrtf( float f ) { return sqrt( f ); }
 #include "rawdraw_sf.h"
 
 #include "os_generic.h"
-
+#include "decompose.h"
 #include "chew.c"
 
 // If running without OpenGL headers, we have to define these.
@@ -49,7 +49,7 @@ void HandleDestroy() { }
 float * frame_to_process = 0;
 
 og_sema_t * sem_ftp;
-
+//XXX TODO TODO PASS IN DATA AND CALL DECOMPOSE.
 
 
 void * ProcessThread( void * v )
@@ -239,7 +239,10 @@ int main()
 	int FPSCt = 0;
 	int pingpong = 0;
 	
-	OGCreateThread( ProcessThread, 0 );
+	int threads = 12;
+	int tid = 0;
+	for( tid = 0; tid < threads; tid++ )
+		OGCreateThread( ProcessThread, 0 );
 
 	while( !quit )
 	{
