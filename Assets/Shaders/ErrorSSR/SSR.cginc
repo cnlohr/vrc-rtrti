@@ -498,7 +498,7 @@ float4 getSSRColor(
 		 */
 		float blurFactor = max(1,min(blur, blur * (-2)*(smoothness-1)));
 		float4 reflection = float4(getBlurredGP(PASS_SCREENSPACE_TEXTURE(GrabTextureSSR), scrnParams, uvs.xy, blurFactor),1);
-		
+		if( reflection.a < 0 ) return 0;
 		reflection.a *= smoothness*reflStr*fade;
 		
 		
