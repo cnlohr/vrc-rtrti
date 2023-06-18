@@ -32,20 +32,24 @@
 		_SmoothnessMux("Smooth Mux", float) = 1.0
 		_SmoothnessShift("Smooth Shift", float) = 0.0
 		[HDR] _Ambient("Ambient Color", Color) = (0.1,0.1,0.1,1.0)
+		
+		[ToggleUI] _ENABLERT( "Enable Ray Tracing", float ) = 1.0
+		[ToggleUI] _ENABLESSR( "Enable SSR", float ) = 1.0
     }
     SubShader
     {
-        //Tags { "RenderType"="Opaque+1" }
-
-        Tags { "Queue" = "Geometry" "RenderType"="Transparent"}
+		Tags { "Queue"="Transparent-1" "RenderType"="Opaque"}
         GrabPass { "_GrabTexture" }
-		
-        CGPROGRAM
-        // Physically based Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Standard nometa
 
-        // Use shader model 3.0 target, to get nicer looking lighting
-        #pragma target 5.0
+		CGPROGRAM
+		// Physically based Standard lighting model, and enable shadows on all light types
+		#pragma surface surf Standard nometa
+
+		//#pragma shader_feature_local _ENABLESSR
+		//#pragma shader_feature_local _ENABLERT
+
+		// Use shader model 3.0 target, to get nicer looking lighting
+		#pragma target 5.0
 		
 		#include "/Assets/cnlohr/Shaders/hashwithoutsine/hashwithoutsine.cginc"
 #ifndef SHADER_TARGET_SURFACE_ANALYSIS
@@ -64,6 +68,7 @@
 		
 		float4 _GrabTexture_TexelSize;
 		float4 _NoiseTex_TexelSize;
+		float _ENABLERT, _ENABLESSR;
 		float _NumberOfCombinedTextures;
 		float _DiffuseUse, _DiffuseShift, _MediaBrightness;
 		float _RoughnessIntensity, _RoughnessShift;
@@ -86,15 +91,15 @@
 		
 		#include "trace.cginc"
 
-        struct Input
-        {
-            float2 uv_MainTex;
+		struct Input
+		{
+			float2 uv_MainTex;
 			float3 worldPos;
 			float3 worldNormal;
 			float3 worldRefl;
 			float4 screenPos;
 			INTERNAL_DATA
-        };
+		};
 
 		//https://community.khronos.org/t/quaternion-functions-for-glsl/50140/2
 		float3 qtransform( in float4 q, in float3 v )
@@ -116,10 +121,10 @@
 			return conj / (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
 		}
 		
-        void surf (Input IN, inout SurfaceOutputStandard o)
-        {
-            // Albedo comes from a texture tinted by color
-            fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _AlbedoBoost * _MainTexColor + _MainTexColorBoost;
+		void surf (Input IN, inout SurfaceOutputStandard o)
+		{
+			// Albedo comes from a texture tinted by color
+			fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _AlbedoBoost * _MainTexColor + _MainTexColorBoost;
 			
 			//float2 hash = chash23( float3( _Time.y * 100, IN.uv_MainTex * 1000 ) )-0.5;
 			//float2 hash2 = chash23( float3( _Time.y * 100, IN.uv_MainTex * 1000 )+10. )-0.5;
@@ -137,7 +142,11 @@
 
 			float epsilon = 0.00;
 			float3 worldEye = IN.worldPos+worldRefl*epsilon;
-			float4 hitz = CoreTrace( worldEye, worldRefl );
+			float4 hitz = 1e20;
+			if( _ENABLERT > 0.5 )
+			{
+				hitz = CoreTrace( worldEye, worldRefl );
+			}
 			
 			float3 debug = 0.0;
 			// Test if we need to reverse-cast through a mirror.
@@ -203,26 +212,29 @@
 			
 			#ifndef SHADER_TARGET_SURFACE_ANALYSIS
 				float matchz = length( _WorldSpaceCameraPos.xyz - hitworld );
-				float4 ssr = getSSRColor( float4( worldEye, 1.0 ), worldViewDir, float4( worldRefl, 0. ), worldNormal,
-					// large/small radius
-					.5, .02,
-					.1, // stepSize
-					3, // Blur
-					100, // Max steps
-					0, // isLowres
-					1, // Smoothness
-					0.1, // Edge fade
-					_GrabTexture_TexelSize.zw,
-					PASS_SCREENSPACE_TEXTURE( _GrabTexture ),
-					_NoiseTex,
-					_NoiseTex_TexelSize.zw,
-					1.0, // albedo
-					1.0, // metallic
-					0.0, // rtint
-					1, // mask
-					1, matchz ); // Alpha
-				col = lerp( col.rgba, ssr.rgba, ssr.a );
-				//col = saturate(ssr.z);
+				float4 ssr = 0.0;
+				if( _ENABLESSR > 0.5 )
+				{
+					ssr = getSSRColor( float4( worldEye, 1.0 ), worldViewDir, float4( worldRefl, 0. ), worldNormal,
+						// large/small radius
+						.5, .02,
+						.1, // stepSize
+						3, // Blur
+						100, // Max steps
+						0, // isLowres
+						1, // Smoothness
+						0.1, // Edge fade
+						_GrabTexture_TexelSize.zw,
+						PASS_SCREENSPACE_TEXTURE( _GrabTexture ),
+						_NoiseTex,
+						_NoiseTex_TexelSize.zw,
+						1.0, // albedo
+						1.0, // metallic
+						0.0, // rtint
+						1, // mask
+						1, matchz ); // Alpha
+					col = lerp( col.rgba, ssr.rgba, ssr.a );
+				}
 			#endif
 			if( length( debug )> 0.0 ) col.rgb = debug;			
 			
@@ -238,14 +250,14 @@
 			//col = (col + sgn.y*ddx_fine( col )*.3 + sgn.y*ddy_fine( col )*.3);
 
 			//c = 1.0;
-            o.Albedo = (c.rgb-_DiffuseShift)*(_DiffuseUse);
-            o.Metallic = tex2D (_Metallicity, IN.uv_MainTex) * _MetallicMux + _MetallicShift;
-            o.Smoothness = tex2D (_Roughness, IN.uv_MainTex) * _SmoothnessMux + _SmoothnessShift;
+			o.Albedo = (c.rgb-_DiffuseShift)*(_DiffuseUse);
+			o.Metallic = tex2D (_Metallicity, IN.uv_MainTex) * _MetallicMux + _MetallicShift;
+			o.Smoothness = tex2D (_Roughness, IN.uv_MainTex) * _SmoothnessMux + _SmoothnessShift;
 			
 			o.Emission = max(col,0) + c.rgb * _Ambient;
-            o.Alpha = -1;
-        }
-        ENDCG
+			o.Alpha = -1;
+		}
+		ENDCG
 
 		// shadow caster rendering pass, implemented manually
 		// using macros from UnityCG.cginc
@@ -280,6 +292,5 @@
 			}
 			ENDCG
 		}
-    }
-    FallBack "Diffuse"
+	}
 }

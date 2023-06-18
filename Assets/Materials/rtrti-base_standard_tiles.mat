@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: rtrti-base_standard_tiles
   m_Shader: {fileID: 4800000, guid: 6b8b5cd2a57a120418783686ae64d4e9, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: _ENABLERT
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -85,8 +85,10 @@ Material:
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DiffuseShift: 0
-    - _DiffuseUse: 1.2
+    - _DiffuseUse: 1
     - _DstBlend: 0
+    - _ENABLERT: 1
+    - _ENABLESSR: 1
     - _Flip: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5

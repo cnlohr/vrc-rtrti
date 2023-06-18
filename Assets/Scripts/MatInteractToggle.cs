@@ -15,13 +15,14 @@ public class MatInteractToggle : UdonSharpBehaviour
 {
 	[Tooltip("List of objects to toggle on and off")]
 	public Material[] matFlip;
+	public string matFlipName;
 	public bool bOn;
 
 	void Start()
 	{
 		foreach (Material m in matFlip)
 		{
-			m.SetFloat( "_OverrideReflection", bOn?1.0f:0.0f );
+			m.SetFloat( matFlipName, bOn?1.0f:0.0f );
 		}
 	}
 
@@ -30,7 +31,7 @@ public class MatInteractToggle : UdonSharpBehaviour
 		bOn = !bOn;
 		foreach (Material m in matFlip)
 		{
-			m.SetFloat( "_OverrideReflection", bOn?1.0f:0.0f );
+			m.SetFloat( matFlipName, bOn?1.0f:0.0f );
 		}
 	}
 	

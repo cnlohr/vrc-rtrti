@@ -87,6 +87,8 @@ Material:
     - _DiffuseShift: 0
     - _DiffuseUse: 1
     - _DstBlend: 0
+    - _ENABLERT: 1
+    - _ENABLESSR: 1
     - _Flip: 0
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -96,13 +98,13 @@ Material:
     - _MetallicMux: 1
     - _MetallicShift: 0
     - _Mode: 0
-    - _NormalizeValue: -0.44
+    - _NormalizeValue: 0.44
     - _NumberOfCombinedTextures: 10
     - _OcclusionStrength: 1
     - _OverrideReflection: 0
     - _Parallax: 0.02
     - _RoughAdj: 0.2
-    - _RoughnessIntensity: -32.34
+    - _RoughnessIntensity: -25
     - _RoughnessShift: 1.9
     - _SkyboxBrightness: 1
     - _SmoothnessMux: 1
