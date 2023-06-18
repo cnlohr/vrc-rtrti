@@ -1,5 +1,6 @@
 # vrc-rtrti
-VRChat Ray Tracing Real Time Illumination
+
+THIS PROJECT IS ABANDONED SORRY.
 
 
 
