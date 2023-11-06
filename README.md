@@ -1,9 +1,8 @@
 # vrc-rtrti
 
-THIS PROJECT IS ABANDONED SORRY.
+This version of this project is abandoned, as I gave up trying to do home-baked RTGI.
 
-
-
+For an updated version of this project, please see the following: https://github.com/cnlohr/vrc-rtrti-basic << This one is supported.
 
 ## Notes on optimization:
 
